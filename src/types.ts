@@ -47,3 +47,25 @@ export const INSTANCE_TYPES: VMInstance[] = [
   { id: 'c5-xlarge', name: 'Вычислительный Про', cpu: 4, ram: 8, storage: 160, pricePerHour: 0.17, tier: 'Оптимизировано для вычислений' },
   { id: 'r5-2xlarge', name: 'Память Ультра', cpu: 8, ram: 64, storage: 320, pricePerHour: 0.50, tier: 'Оптимизировано для памяти' },
 ];
+
+export interface DeployedVM {
+  id: string;
+  name: string;
+  hostname: string;
+  status: 'running' | 'stopped' | 'creating' | 'error';
+  config: VMInstance;
+  ipAddress: string;
+  cpuUsage: number;
+  ramUsage: number;
+  diskUsage: number;
+  uptime: string;
+  network: string;
+}
+
+export interface Activity {
+  id: string;
+  action: string;
+  vmName: string;
+  timestamp: string;
+  status: 'success' | 'error' | 'pending';
+}

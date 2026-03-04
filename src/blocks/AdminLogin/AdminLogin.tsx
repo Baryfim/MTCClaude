@@ -103,10 +103,6 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin }) => {
               {isLoading ? <div className={styles.spinner} /> : 'Войти'}
             </button>
           </form>
-
-          <div className={styles.hint}>
-            💡 Для входа используйте: admin / 12345
-          </div>
         </motion.div>
       </motion.div>
     </div>

@@ -14,38 +14,64 @@
 
 .logoContainer {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
+
+  @media (min-width: 640px) {
+    margin-bottom: 2rem;
+  }
 }
 
 .logo {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 5rem;
-  height: 5rem;
+  width: 4rem;
+  height: 4rem;
   background: linear-gradient(to bottom right, #4a4a4a, #666666);
   border-radius: 1rem;
   margin-bottom: 1rem;
+
+  @media (min-width: 640px) {
+    width: 5rem;
+    height: 5rem;
+  }
 }
 
 .title {
-  font-size: 1.875rem;
+  font-size: 1.5rem;
   font-weight: 700;
   color: white;
   margin-bottom: 0.5rem;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+
+  @media (min-width: 640px) {
+    font-size: 1.875rem;
+  }
 }
 
 .subtitle {
   color: #94a3b8;
+  font-size: 0.875rem;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+
+  @media (min-width: 640px) {
+    font-size: 1rem;
+  }
 }
 
 .formContainer {
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(16px);
   border-radius: 1rem;
-  padding: 2rem;
+  padding: 1.5rem;
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+
+  @media (min-width: 640px) {
+    padding: 2rem;
+  }
 }
 
 .form {

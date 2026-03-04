@@ -16,11 +16,17 @@
 .modal {
   background: white;
   border-radius: 1.5rem;
-  padding: 3rem;
+  padding: 2rem;
   max-width: 28rem;
   width: 100%;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   position: relative;
+  max-height: 90vh;
+  overflow-y: auto;
+
+  @media (min-width: 640px) {
+    padding: 3rem;
+  }
 }
 
 .closeButton {
@@ -51,31 +57,53 @@
 
 .header {
   text-align: center;
-  margin-bottom: 2.5rem;
+  margin-bottom: 2rem;
+
+  @media (min-width: 640px) {
+    margin-bottom: 2.5rem;
+  }
 
   .icon {
-    width: 4rem;
-    height: 4rem;
+    width: 3.5rem;
+    height: 3.5rem;
     background: black;
     border-radius: 9999px;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto 1.5rem;
+    margin: 0 auto 1.25rem;
     color: white;
+
+    @media (min-width: 640px) {
+      width: 4rem;
+      height: 4rem;
+      margin-bottom: 1.5rem;
+    }
   }
 
   h2 {
-    font-size: 2rem;
+    font-size: 1.5rem;
     font-weight: 700;
     color: black;
     margin-bottom: 0.5rem;
     letter-spacing: -0.025em;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+
+    @media (min-width: 640px) {
+      font-size: 2rem;
+    }
   }
 
   p {
     color: rgba(0, 0, 0, 0.4);
-    font-size: 0.875rem;
+    font-size: 0.813rem;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+
+    @media (min-width: 640px) {
+      font-size: 0.875rem;
+    }
   }
 }
 

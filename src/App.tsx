@@ -204,6 +204,7 @@ export default function App() {
               </div>
               <button onClick={handleLogout} className={styles.logoutButton}>
                 <LogOut />
+                <span>Выйти</span>
               </button>
             </div>
           ) : (

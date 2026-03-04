@@ -69,7 +69,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
             </div>
             <button onClick={onLogout} className={styles.logoutButton}>
               <LogOut />
-              Выйти
+              <span>Выйти</span>
             </button>
           </div>
         </div>

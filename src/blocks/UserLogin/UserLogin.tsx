@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { User, Lock, AlertCircle, X } from 'lucide-react';
 import styles from './UserLogin.module.scss';
+import axios from 'axios';
 
 interface UserLoginProps {
   onLogin: (username: string, password: string) => void;
@@ -15,6 +16,7 @@ export const UserLogin: React.FC<UserLoginProps> = ({ onLogin, onClose, mode }) 
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const apiUrl = import.meta.env.DB_HOST
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +39,19 @@ export const UserLogin: React.FC<UserLoginProps> = ({ onLogin, onClose, mode }) 
     }
 
     if (username && password) {
-      onLogin(username, password);
+        const requestData = {
+          username,
+          password,
+          company_name: mode === 'register' ? 'Default Company' : undefined // или возьми из формы
+        };
+
+        const response = await axios.post(`${apiUrl}/api/auth`, requestData); // замени URL на свой
+
+        // Успешный ответ 
+        if (response) {
+          onLogin(username, password);
+        }
+
     } else {
       setError('Заполните все поля');
       setIsLoading(false);
@@ -127,7 +141,7 @@ export const UserLogin: React.FC<UserLoginProps> = ({ onLogin, onClose, mode }) 
             </motion.div>
           )}
 
-          <button 
+          <button
             type="submit"
             disabled={isLoading}
             className={styles.submitButton}

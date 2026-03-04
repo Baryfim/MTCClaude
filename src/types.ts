@@ -69,3 +69,17 @@ export interface Activity {
   timestamp: string;
   status: 'success' | 'error' | 'pending';
 }
+
+export type VMStatus = 'CREATING' | 'RUNNING' | 'STOPPED' | 'ERROR' | 'DELETING';
+
+export interface UserVM {
+  id: number;
+  tenant_name: string;
+  name: string;
+  agent_resource_id: string;
+  image: string;
+  cpu_cores: number;
+  ram_mb: number;
+  status: VMStatus;
+  created_at: string;
+}

@@ -7,7 +7,7 @@ import {
   Server,
   ChevronLeft
 } from 'lucide-react';
-import { DeployedVM, Activity as ActivityType, INSTANCE_TYPES, VMInstance } from './types';
+import { VMInstance } from './types';
 import { AdminConsole } from './blocks/AdminConsole/AdminConsole';
 import { AdminDesktop } from './blocks/AdminDesktop/AdminDesktop';
 import { Charts } from './blocks/Charts/Charts';
@@ -17,13 +17,25 @@ import { UserLogin } from './blocks/UserLogin/UserLogin';
 import { VMPlanSelector } from './blocks/VMPlanSelector/VMPlanSelector';
 import { UsageHistory } from './blocks/UsageHistory/UsageHistory';
 import styles from './App.module.scss';
+import { useAppDispatch, useAppSelector } from './lib/hooks';
+import { 
+  createVM, 
+  deleteVMAsync,
+  startVMAsync,
+  stopVMAsync,
+  restartVM,
+  selectAllVMs,
+  selectActivities
+} from './lib/slices/userVMsSlice';
 
 export default function App() {
+  const dispatch = useAppDispatch();
+  const deployedVMs = useAppSelector(selectAllVMs);
+  const activities = useAppSelector(selectActivities);
+  
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userName, setUserName] = useState('Guest');
   const [currentView, setCurrentView] = useState<'main' | 'dashboard'>('main');
-  const [deployedVMs, setDeployedVMs] = useState<DeployedVM[]>([]);
-  const [activities, setActivities] = useState<ActivityType[]>([]);
   const [showConsole, setShowConsole] = useState<{ vmId: string; vmName: string } | null>(null);
   const [showDesktop, setShowDesktop] = useState<{ vmId: string; vmName: string } | null>(null);
   const [isConsoleFullscreen, setIsConsoleFullscreen] = useState(false);
@@ -85,38 +97,19 @@ export default function App() {
   };
 
   const handleVMAction = (vmId: string, action: 'start' | 'stop' | 'restart' | 'delete') => {
-    if (action === 'delete') {
-      const vm = deployedVMs.find(v => v.id === vmId);
-      setDeployedVMs(deployedVMs.filter(v => v.id !== vmId));
-      if (vm) {
-        const newActivity: ActivityType = {
-          id: `act-${Date.now()}`,
-          action: 'Удалена ВМ',
-          vmName: vm.name,
-          timestamp: new Date().toLocaleString('ru-RU'),
-          status: 'success'
-        };
-        setActivities([newActivity, ...activities]);
-      }
-    } else {
-      setDeployedVMs(deployedVMs.map(vm => {
-        if (vm.id === vmId) {
-          const newStatus = action === 'start' ? 'running' : action === 'stop' ? 'stopped' : vm.status;
-          const actionText = action === 'start' ? 'Запущена ВМ' : action === 'stop' ? 'Остановлена ВМ' : 'Перезапущена ВМ';
-          
-          const newActivity: ActivityType = {
-            id: `act-${Date.now()}`,
-            action: actionText,
-            vmName: vm.name,
-            timestamp: new Date().toLocaleString('ru-RU'),
-            status: 'success'
-          };
-          setActivities([newActivity, ...activities]);
-          
-          return { ...vm, status: newStatus as 'running' | 'stopped' };
-        }
-        return vm;
-      }));
+    switch (action) {
+      case 'delete':
+        dispatch(deleteVMAsync(vmId));
+        break;
+      case 'start':
+        dispatch(startVMAsync(vmId));
+        break;
+      case 'stop':
+        dispatch(stopVMAsync(vmId));
+        break;
+      case 'restart':
+        dispatch(restartVM(vmId));
+        break;
     }
   };
 
@@ -158,11 +151,11 @@ export default function App() {
   };
 
   const handleCreateVM = (selectedInstance: VMInstance) => {
-    const newVM: DeployedVM = {
+    const newVM = {
       id: `vm-${Date.now()}`,
       name: `Server-${deployedVMs.length + 1}`,
       hostname: `vm${deployedVMs.length + 1}.cloudscale.local`,
-      status: 'running',
+      status: 'running' as const,
       config: selectedInstance,
       ipAddress: `10.0.1.${10 + deployedVMs.length}`,
       cpuUsage: Math.floor(Math.random() * 60) + 20,
@@ -172,17 +165,7 @@ export default function App() {
       network: 'default-network'
     };
     
-    setDeployedVMs([...deployedVMs, newVM]);
-    
-    const newActivity: ActivityType = {
-      id: `act-${Date.now()}`,
-      action: 'Создана ВМ',
-      vmName: newVM.name,
-      timestamp: new Date().toLocaleString('ru-RU'),
-      status: 'success'
-    };
-    
-    setActivities([newActivity, ...activities]);
+    dispatch(createVM(newVM));
     setCurrentView('dashboard');
   };
 

@@ -1,0 +1,271 @@
+.container {
+  min-height: 100vh;
+  background: linear-gradient(to bottom right, #1a1a1a, #2d2d2d, #1a1a1a);
+}
+
+.header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+
+  .headerContent {
+    max-width: 80rem;
+    margin: 0 auto;
+    padding: 0 1rem;
+
+    @media (min-width: 640px) {
+      padding: 0 1.5rem;
+    }
+
+    @media (min-width: 1024px) {
+      padding: 0 2rem;
+    }
+  }
+
+  .headerInner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 4rem;
+  }
+
+  .logoSection {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .logoBox {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    background: linear-gradient(to bottom right, #4a4a4a, #666666);
+    border-radius: 0.5rem;
+
+    svg {
+      width: 1.5rem;
+      height: 1.5rem;
+      color: white;
+    }
+  }
+
+  .title {
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: white;
+    }
+
+    p {
+      font-size: 0.75rem;
+      color: #94a3b8;
+    }
+  }
+
+  .logoutButton {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: background 0.3s;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    svg {
+      width: 1rem;
+      height: 1rem;
+    }
+  }
+}
+
+.content {
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+
+  @media (min-width: 640px) {
+    padding: 2rem 1.5rem;
+  }
+
+  @media (min-width: 1024px) {
+    padding: 2rem 2rem;
+  }
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (min-width: 1024px) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.statCard {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+
+  .statInner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .statInfo {
+    p {
+      color: #94a3b8;
+      font-size: 0.875rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .statValue {
+      font-size: 1.875rem;
+      font-weight: 700;
+      color: white;
+    }
+  }
+
+  .statIcon {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &.purple {
+      background: rgba(100, 100, 100, 0.2);
+
+      svg {
+        width: 1.5rem;
+        height: 1.5rem;
+        color: #a0a0a0;
+      }
+    }
+
+    &.green {
+      background: rgba(120, 120, 120, 0.2);
+
+      svg {
+        width: 1.5rem;
+        height: 1.5rem;
+        color: #b0b0b0;
+      }
+    }
+
+    &.blue {
+      background: rgba(90, 90, 90, 0.2);
+
+      svg {
+        width: 1.5rem;
+        height: 1.5rem;
+        color: #999999;
+      }
+    }
+
+    &.orange {
+      background: rgba(80, 80, 80, 0.2);
+
+      svg {
+        width: 1.5rem;
+        height: 1.5rem;
+        color: #888888;
+      }
+    }
+  }
+}
+
+.chartsGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+
+  @media (min-width: 1024px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.chartCard {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+
+  h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: white;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    svg {
+      width: 1.25rem;
+      height: 1.25rem;
+    }
+  }
+}
+
+.sessionsPanel {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px);
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+}
+
+.panelHeader {
+  padding: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+  h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    svg {
+      width: 1.5rem;
+      height: 1.5rem;
+    }
+  }
+}
+
+.emptyState {
+  text-align: center;
+  padding: 3rem;
+
+  svg {
+    width: 3rem;
+    height: 3rem;
+    color: #475569;
+    margin: 0 auto 0.75rem;
+  }
+
+  p {
+    color: #94a3b8;
+  }
+}

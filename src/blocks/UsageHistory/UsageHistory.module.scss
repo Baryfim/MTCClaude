@@ -1,0 +1,223 @@
+.container {
+  margin-bottom: 4rem;
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 2rem;
+  }
+}
+
+.card {
+  background: white;
+  border-radius: 1.5rem;
+  padding: 2rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+
+  .titleGroup {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+
+    svg {
+      width: 1.5rem;
+      height: 1.5rem;
+      color: rgba(0, 0, 0, 0.4);
+    }
+
+    h3 {
+      font-size: 1.125rem;
+      font-weight: 700;
+    }
+  }
+
+  .count {
+    padding: 0.5rem 1rem;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: rgba(0, 0, 0, 0.6);
+  }
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+  color: rgba(0, 0, 0, 0.4);
+
+  svg {
+    width: 3rem;
+    height: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  p {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: rgba(0, 0, 0, 0.6);
+  }
+
+  span {
+    font-size: 0.875rem;
+  }
+}
+
+.activityItem {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-left: 3px solid rgba(0, 0, 0, 0.2);
+  border-radius: 1rem;
+  transition: all 0.3s;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.04);
+    border-left-width: 4px;
+  }
+
+  &.success {
+    border-left-color: #888888;
+    
+    .iconContainer {
+      background: rgba(120, 120, 120, 0.1);
+      color: #888888;
+    }
+  }
+
+  &.error {
+    border-left-color: #555555;
+    
+    .iconContainer {
+      background: rgba(80, 80, 80, 0.1);
+      color: #555555;
+    }
+  }
+
+  &.pending {
+    border-left-color: #999999;
+    
+    .iconContainer {
+      background: rgba(140, 140, 140, 0.1);
+      color: #999999;
+    }
+  }
+}
+
+.iconContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 0.75rem;
+  flex-shrink: 0;
+
+  svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+}
+
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  .main {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+
+    .action {
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+
+    .vmName {
+      padding: 0.25rem 0.75rem;
+      background: rgba(0, 0, 0, 0.08);
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      font-family: monospace;
+    }
+  }
+
+  .meta {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    color: rgba(0, 0, 0, 0.4);
+    font-size: 0.75rem;
+
+    svg {
+      width: 0.875rem;
+      height: 0.875rem;
+    }
+  }
+}
+
+.statusBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
+  flex-shrink: 0;
+
+  svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .success & {
+    background: rgba(120, 120, 120, 0.1);
+    color: #888888;
+  }
+
+  .error & {
+    background: rgba(80, 80, 80, 0.1);
+    color: #555555;
+  }
+
+  .pending & {
+    background: rgba(140, 140, 140, 0.1);
+    color: #999999;
+    animation: spin 1s linear infinite;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

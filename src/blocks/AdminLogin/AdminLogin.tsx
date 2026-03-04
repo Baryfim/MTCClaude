@@ -17,7 +17,6 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin }) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
-
     await new Promise(resolve => setTimeout(resolve, 800));
 
     if (username === 'admin' && password === '12345') {

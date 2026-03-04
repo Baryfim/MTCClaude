@@ -4,6 +4,7 @@ import { Cpu, MemoryStick, HardDrive, Zap, Check } from 'lucide-react';
 import { INSTANCE_TYPES, VMInstance } from '../../types';
 import styles from './VMPlanSelector.module.scss';
 import axios from 'axios';
+const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 interface VMPlanSelectorProps {
   onSelect: (instance: VMInstance) => void;
@@ -12,29 +13,22 @@ interface VMPlanSelectorProps {
 export const VMPlanSelector: React.FC<VMPlanSelectorProps> = ({ onSelect }) => {
   const [selectedTier, setSelectedTier] = useState<string>('Общего назначения');
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-  const apiUrl = import.meta.env.DB_HOST
+
   const tiers = Array.from(new Set(INSTANCE_TYPES.map(i => i.tier)));
   const filteredInstances = INSTANCE_TYPES.filter(i => i.tier === selectedTier);
 
   const handleSelectPlan = async (instance: VMInstance) => {
+    await axios.post(`${apiUrl}/api/auth`, {
+      name: instance.name,
+      image: "standart unix OS", // TODO: добавить выбор образа в UI
+      cpu_cores: instance.cpu,
+      ram_mb: instance.ram,
+      storage: instance.storage,
+      price_per_hour: instance.pricePerHour
+    });
 
-    const requestData = {
-      "name": instance.name,
-      "image": "standart unix OS",
-      "cpu_cores": instance.cpu,
-      "ram_mb": instance.ram,
-      "storage": instance.storage,
-      "price_per_hour": instance.pricePerHour
-    };
-
-    const response = await axios.post(`${apiUrl}/api/auth`, requestData)
-
-    // Успешный ответ
-    if (response.data.token) {
-      setSelectedPlan(instance.id);
-      onSelect(instance);
-    } 
-
+    setSelectedPlan(instance.id);
+    onSelect(instance);
   };
 
   return (

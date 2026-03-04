@@ -1,22 +1,81 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Cpu, Activity } from 'lucide-react';
+import { useAppSelector } from '../../lib/hooks';
+import { selectMetricsHistory } from '../../lib/slices/vmMetricsSlice';
+import { selectActiveVMs } from '../../lib/slices/userVMsSlice';
+import { VMMetricsTimeSeries } from '../../types';
 import styles from './Charts.module.scss';
 
 interface ChartsProps {
-  data: Array<{
-    time: string;
-    cpu: number;
-    ram: number;
-    disk: number;
-    network: number;
-  }>;
+  vmId?: string; // Опционально: показывать метрики конкретной VM
 }
 
-export const Charts: React.FC<ChartsProps> = ({ data }) => {
+export const Charts: React.FC<ChartsProps> = ({ vmId }) => {
+  const metricsHistory = useAppSelector(selectMetricsHistory);
+  const activeVMs = useAppSelector(selectActiveVMs);
+
+  // Преобразовать историю метрик в формат для графиков
+  const chartData = useMemo<VMMetricsTimeSeries[]>(() => {
+    // Фильтровать по конкретной VM если указано
+    const relevantHistory = vmId 
+      ? metricsHistory.filter(h => h.vmId === vmId)
+      : metricsHistory;
+
+    if (relevantHistory.length === 0) {
+      // Если нет данных, вернуть mock данные
+      const mockData: VMMetricsTimeSeries[] = [];
+      for (let i = 23; i >= 0; i--) {
+        const hour = new Date();
+        hour.setHours(hour.getHours() - i);
+        mockData.push({
+          time: `${hour.getHours()}:00`,
+          cpu: Math.floor(Math.random() * 40) + 30 + Math.sin(i / 3) * 15,
+          ram: Math.floor(Math.random() * 35) + 40 + Math.cos(i / 4) * 20,
+          disk: Math.floor(Math.random() * 20) + 25,
+          network: Math.floor(Math.random() * 50) + 20
+        });
+      }
+      return mockData;
+    }
+
+    // Группировать метрики по времени (округлять до минут)
+    const timeGrouped = new Map<string, VMMetricsTimeSeries>();
+    
+    relevantHistory.forEach(({ timestamp, metrics }) => {
+      const date = new Date(timestamp);
+      const timeKey = `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
+      
+      if (!timeGrouped.has(timeKey)) {
+        timeGrouped.set(timeKey, {
+          time: timeKey,
+          cpu: metrics.cpu_cores || 0,
+          ram: metrics.ram_mb ? (metrics.ram_mb / 1024) : 0, // Конвертировать в GB для отображения
+          disk: metrics.storage || 0,
+          network: Math.random() * 50 + 20 // TODO: добавить реальные данные сети когда API будет готов
+        });
+      }
+    });
+
+    // Взять последние 24 точки данных
+    const sortedData = Array.from(timeGrouped.values())
+      .slice(-24);
+
+    return sortedData.length > 0 ? sortedData : [];
+  }, [metricsHistory, vmId]);
+
+  // Показать информацию о том, что отображается
+  const displayTitle = useMemo(() => {
+    if (vmId) {
+      const vm = activeVMs.find(v => v.id === vmId);
+      return vm ? `Мониторинг ресурсов - ${vm.name}` : 'Мониторинг ресурсов';
+    }
+    return 'Мониторинг ресурсов за последние 24 часа';
+  }, [vmId, activeVMs]);
+
   return (
     <section className={styles.container}>
-      <h2>Мониторинг ресурсов за 24 часа</h2>
+      <h2>{displayTitle}</h2>
       
       <div className={styles.chartsGrid}>
         <div className={styles.chartCard}>
@@ -25,7 +84,7 @@ export const Charts: React.FC<ChartsProps> = ({ data }) => {
             CPU и RAM использование
           </h3>
           <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={data}>
+            <AreaChart data={chartData}>
               <defs>
                 <linearGradient id="colorCpu" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#000000" stopOpacity={0.3}/>
@@ -88,7 +147,7 @@ export const Charts: React.FC<ChartsProps> = ({ data }) => {
             Диск и сеть
           </h3>
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={data}>
+            <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis 
                 dataKey="time" 

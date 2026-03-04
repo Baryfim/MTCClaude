@@ -27,6 +27,7 @@ import {
   selectAllVMs,
   selectActivities
 } from './lib/slices/userVMsSlice';
+import { useVMMetricsPolling } from './lib/hooks/useVMMetricsPolling';
 
 export default function App() {
   const dispatch = useAppDispatch();
@@ -45,21 +46,8 @@ export default function App() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginMode, setLoginMode] = useState<'login' | 'register'>('login');
 
-  const resourceUsageData = useMemo(() => {
-    const data = [];
-    for (let i = 23; i >= 0; i--) {
-      const hour = new Date();
-      hour.setHours(hour.getHours() - i);
-      data.push({
-        time: `${hour.getHours()}:00`,
-        cpu: Math.floor(Math.random() * 40) + 30 + Math.sin(i / 3) * 15,
-        ram: Math.floor(Math.random() * 35) + 40 + Math.cos(i / 4) * 20,
-        disk: Math.floor(Math.random() * 20) + 25,
-        network: Math.floor(Math.random() * 50) + 20
-      });
-    }
-    return data;
-  }, []);
+  // Включить опрос метрик когда пользователь залогинен и на странице дашборда
+  useVMMetricsPolling(isLoggedIn && currentView === 'dashboard', 10000);
 
   const accountLimits = {
     cpu: 8,
@@ -75,19 +63,14 @@ export default function App() {
     vms: deployedVMs.length
   }), [deployedVMs]);
 
-  const handleLogin = (username: string, password: string) => {
+  const handleLogin = (username: string) => {
     setUserName(username);
     setIsLoggedIn(true);
     setShowLoginModal(false);
   };
 
-  const handleShowLogin = () => {
-    setLoginMode('login');
-    setShowLoginModal(true);
-  };
-
-  const handleShowRegister = () => {
-    setLoginMode('register');
+  const handleShowModal = (mode: 'login' | 'register') => {
+    setLoginMode(mode);
     setShowLoginModal(true);
   };
 
@@ -115,9 +98,9 @@ export default function App() {
 
   const handleOpenConsole = (vmId: string) => {
     const vm = deployedVMs.find(v => v.id === vmId);
-    if (vm && vm.status === 'running') {
+    if (vm?.status === 'running') {
       setCurrentVmId(vmId);
-      setShowConsole({ vmId: vm.id, vmName: vm.name });
+      setShowConsole({ vmId, vmName: vm.name });
       setShowDesktop(null);
       setVmViewMode('console');
       setIsConsoleFullscreen(false);
@@ -126,9 +109,9 @@ export default function App() {
 
   const handleOpenDesktop = (vmId: string) => {
     const vm = deployedVMs.find(v => v.id === vmId);
-    if (vm && vm.status === 'running') {
+    if (vm?.status === 'running') {
       setCurrentVmId(vmId);
-      setShowDesktop({ vmId: vm.id, vmName: vm.name });
+      setShowDesktop({ vmId, vmName: vm.name });
       setShowConsole(null);
       setVmViewMode('desktop');
       setIsDesktopFullscreen(false);
@@ -136,18 +119,12 @@ export default function App() {
   };
 
   const switchViewMode = (mode: 'console' | 'desktop') => {
-    if (!currentVmId) return;
     const vm = deployedVMs.find(v => v.id === currentVmId);
     if (!vm) return;
 
     setVmViewMode(mode);
-    if (mode === 'console') {
-      setShowConsole({ vmId: vm.id, vmName: vm.name });
-      setShowDesktop(null);
-    } else {
-      setShowDesktop({ vmId: vm.id, vmName: vm.name });
-      setShowConsole(null);
-    }
+    setShowConsole(mode === 'console' ? { vmId: vm.id, vmName: vm.name } : null);
+    setShowDesktop(mode === 'desktop' ? { vmId: vm.id, vmName: vm.name } : null);
   };
 
   const handleCreateVM = (selectedInstance: VMInstance) => {
@@ -192,10 +169,10 @@ export default function App() {
             </div>
           ) : (
             <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button onClick={handleShowLogin} className={`${styles.authButton} ${styles.login}`}>
+              <button onClick={() => handleShowModal('login')} className={`${styles.authButton} ${styles.login}`}>
                 Войти
               </button>
-              <button onClick={handleShowRegister} className={`${styles.authButton} ${styles.register}`}>
+              <button onClick={() => handleShowModal('register')} className={`${styles.authButton} ${styles.register}`}>
                 Регистрация
               </button>
             </div>
@@ -215,7 +192,7 @@ export default function App() {
             <div className={styles.meta}>
               <div className={styles.metaItem}>
                 <User />
-                <span>{userName || 'Пользователь'}</span>
+                <span>{userName}</span>
               </div>
               <div className={styles.metaItem}>
                 <Server />
@@ -225,7 +202,7 @@ export default function App() {
           </div>
 
           <ResourceUsage usedResources={usedResources} accountLimits={accountLimits} />
-          <Charts data={resourceUsageData} />
+          <Charts />
           <UserVMs 
             vms={deployedVMs}
             onVMAction={handleVMAction}

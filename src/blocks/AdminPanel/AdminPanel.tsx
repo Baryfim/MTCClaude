@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   ShieldCheck,
@@ -8,9 +8,22 @@ import {
   Server,
   Clock,
   BarChart3,
-  Globe
+  Globe,
+  Edit,
+  Play,
+  Square,
+  Trash2
 } from 'lucide-react';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
+import { useAppDispatch, useAppSelector } from '../../lib/hooks';
+import { 
+  fetchAllUsersVMsAsync, 
+  updateVMResourcesAsync, 
+  selectAdminVMs, 
+  selectAdminLoading,
+  selectAdminError
+} from '../../lib/slices/adminSlice';
+import { AdminVM, VMResourceUpdate } from '../../types';
 import styles from './AdminPanel.module.scss';
 
 interface UserSession {
@@ -24,18 +37,78 @@ interface UserSession {
   vmCount: number;
 }
 
+interface EditModalState {
+  isOpen: boolean;
+  vm: AdminVM | null;
+  cpuCores: number;
+  ramMb: number;
+  storage: number;
+}
+
 interface AdminPanelProps {
   onLogout: () => void;
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
+  const dispatch = useAppDispatch();
+  const adminVMs = useAppSelector(selectAdminVMs);
+  const loading = useAppSelector(selectAdminLoading);
+  const error = useAppSelector(selectAdminError);
+  
+  const [editModal, setEditModal] = useState<EditModalState>({
+    isOpen: false,
+    vm: null,
+    cpuCores: 0,
+    ramMb: 0,
+    storage: 0
+  });
+
+  // Загрузить все VM при монтировании
+  useEffect(() => {
+    dispatch(fetchAllUsersVMsAsync());
+  }, [dispatch]);
+
+  // Открыть модальное окно редактирования
+  const handleEdit = (vm: AdminVM) => {
+    setEditModal({
+      isOpen: true,
+      vm,
+      cpuCores: vm.cpu_cores,
+      ramMb: vm.ram_mb,
+      storage: vm.storage_gb || 0
+    });
+  };
+
+  // Сохранить изменения
+  const handleSave = async () => {
+    if (!editModal.vm) return;
+    
+    const update: VMResourceUpdate = {
+      id: editModal.vm.id.toString(),
+      cpu_cores: editModal.cpuCores,
+      ram_mb: editModal.ramMb,
+      storage: editModal.storage
+    };
+    
+    await dispatch(updateVMResourcesAsync(update));
+    setEditModal({ isOpen: false, vm: null, cpuCores: 0, ramMb: 0, storage: 0 });
+    
+    // Обновить список VM
+    dispatch(fetchAllUsersVMsAsync());
+  };
+
+  // Закрыть модальное окно
+  const handleCloseModal = () => {
+    setEditModal({ isOpen: false, vm: null, cpuCores: 0, ramMb: 0, storage: 0 });
+  };
+  
   // Fake data for demonstration
   const sessions: UserSession[] = [];
   const stats = {
     totalSessions: 0,
     activeSessions: 0,
     inactiveSessions: 0,
-    totalVMs: 0,
+    totalVMs: adminVMs.length,
     avgSessionTime: '0.0'
   };
 
@@ -227,17 +300,154 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
         >
           <div className={styles.panelHeader}>
             <h2>
-              <Users />
-              Активные сессии пользователей
+              <Server />
+              Виртуальные машины пользователей
             </h2>
+            <span className={styles.vmCount}>Всего: {adminVMs.length}</span>
           </div>
 
-          <div className={styles.emptyState}>
-            <Users />
-            <p>Нет активных сессий</p>
-          </div>
+          {loading ? (
+            <div className={styles.loadingState}>
+              <Activity className={styles.spinner} />
+              <p>Загрузка...</p>
+            </div>
+          ) : error ? (
+            <div className={styles.errorState}>
+              <p>Ошибка: {error}</p>
+            </div>
+          ) : adminVMs.length === 0 ? (
+            <div className={styles.emptyState}>
+              <Server />
+              <p>Нет виртуальных машин</p>
+            </div>
+          ) : (
+            <div className={styles.vmTable}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Имя VM</th>
+                    <th>Пользователь</th>
+                    <th>Статус</th>
+                    <th>CPU</th>
+                    <th>RAM (MB)</th>
+                    <th>Storage (GB)</th>
+                    <th>Создана</th>
+                    <th>Действия</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {adminVMs.map((vm) => (
+                    <tr key={vm.id}>
+                      <td>{vm.id}</td>
+                      <td>{vm.name}</td>
+                      <td>{vm.tenant_name}</td>
+                      <td>
+                        <span className={`${styles.status} ${styles[vm.status.toLowerCase()]}`}>
+                          {vm.status === 'RUNNING' && <Play size={14} />}
+                          {vm.status === 'STOPPED' && <Square size={14} />}
+                          {vm.status}
+                        </span>
+                      </td>
+                      <td>{vm.cpu_cores}</td>
+                      <td>{vm.ram_mb}</td>
+                      <td>{vm.storage_gb || 'N/A'}</td>
+                      <td>{new Date(vm.created_at).toLocaleDateString('ru-RU')}</td>
+                      <td>
+                        <button
+                          className={styles.editButton}
+                          onClick={() => handleEdit(vm)}
+                          title="Редактировать ресурсы"
+                        >
+                          <Edit size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </motion.div>
       </div>
+
+      {/* Модальное окно редактирования */}
+      {editModal.isOpen && editModal.vm && (
+        <div className={styles.modalOverlay} onClick={handleCloseModal}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className={styles.modalContent}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.modalHeader}>
+              <h3>Редактировать ресурсы VM</h3>
+              <button className={styles.closeButton} onClick={handleCloseModal}>×</button>
+            </div>
+            
+            <div className={styles.modalBody}>
+              <div className={styles.vmInfo}>
+                <p><strong>VM:</strong> {editModal.vm.name}</p>
+                <p><strong>Пользователь:</strong> {editModal.vm.tenant_name}</p>
+                <p><strong>ID:</strong> {editModal.vm.id}</p>
+              </div>
+              
+              <div className={styles.formGroup}>
+                <label htmlFor="cpuCores">
+                  Ядра CPU
+                </label>
+                <input
+                  id="cpuCores"
+                  type="number"
+                  min="1"
+                  max="64"
+                  value={editModal.cpuCores}
+                  onChange={(e) => setEditModal({ ...editModal, cpuCores: parseInt(e.target.value) || 1 })}
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label htmlFor="ramMb">
+                  Оперативная память (MB)
+                </label>
+                <input
+                  id="ramMb"
+                  type="number"
+                  min="512"
+                  max="131072"
+                  step="512"
+                  value={editModal.ramMb}
+                  onChange={(e) => setEditModal({ ...editModal, ramMb: parseInt(e.target.value) || 512 })}
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label htmlFor="storage">
+                  Хранилище (GB)
+                </label>
+                <input
+                  id="storage"
+                  type="number"
+                  min="10"
+                  max="2048"
+                  step="10"
+                  value={editModal.storage}
+                  onChange={(e) => setEditModal({ ...editModal, storage: parseInt(e.target.value) || 10 })}
+                />
+              </div>
+            </div>
+
+            <div className={styles.modalFooter}>
+              <button className={styles.cancelButton} onClick={handleCloseModal}>
+                Отмена
+              </button>
+              <button className={styles.saveButton} onClick={handleSave}>
+                Сохранить
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };

@@ -5,7 +5,7 @@ import styles from './UserLogin.module.scss';
 import axios from 'axios';
 
 interface UserLoginProps {
-  onLogin: (username: string, password: string) => void;
+  onLogin: (username: string) => void;
   onClose: () => void;
   mode: 'login' | 'register';
 }
@@ -16,46 +16,32 @@ export const UserLogin: React.FC<UserLoginProps> = ({ onLogin, onClose, mode }) 
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const apiUrl = import.meta.env.DB_HOST
+  const apiUrl = import.meta.env.VITE_API_URL;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setIsLoading(true);
 
+    if (mode === 'register' && password !== confirmPassword) {
+      setError('Пароли не совпадают');
+      return;
+    }
+
+    if (mode === 'register' && password.length < 6) {
+      setError('Пароль должен быть не менее 6 символов');
+      return;
+    }
+
+    setIsLoading(true);
     await new Promise(resolve => setTimeout(resolve, 800));
 
-    if (mode === 'register') {
-      if (password !== confirmPassword) {
-        setError('Пароли не совпадают');
-        setIsLoading(false);
-        return;
-      }
-      if (password.length < 6) {
-        setError('Пароль должен быть не менее 6 символов');
-        setIsLoading(false);
-        return;
-      }
-    }
+    await axios.post(`${apiUrl}/api/auth`, {
+      username,
+      password,
+      company_name: mode === 'register' ? 'Default Company' : undefined
+    });
 
-    if (username && password) {
-        const requestData = {
-          username,
-          password,
-          company_name: mode === 'register' ? 'Default Company' : undefined // или возьми из формы
-        };
-
-        const response = await axios.post(`${apiUrl}/api/auth`, requestData); // замени URL на свой
-
-        // Успешный ответ 
-        if (response) {
-          onLogin(username, password);
-        }
-
-    } else {
-      setError('Заполните все поля');
-      setIsLoading(false);
-    }
+    onLogin(username);
   };
 
   return (

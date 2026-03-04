@@ -45,34 +45,22 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
     const trimmedCmd = cmd.trim();
     setHistory(prev => [...prev, { type: 'input', text: `root@${vmName}:~$ ${trimmedCmd}` }]);
 
-    if (!trimmedCmd) {
+    if (!trimmedCmd) return;
+
+    const commands: Record<string, string> = {
+      help: 'Available commands:\n  ls - list files\n  pwd - print working directory\n  date - show current date\n  uptime - show system uptime\n  clear - clear screen\n  help - show this help',
+      ls: 'Documents  Downloads  Pictures  Videos  projects',
+      pwd: '/root',
+      date: new Date().toString(),
+      uptime: 'up 2 days, 5 hours, 23 minutes'
+    };
+
+    if (trimmedCmd.toLowerCase() === 'clear') {
+      setHistory([{ type: 'output', text: '' }]);
       return;
     }
 
-    let output = '';
-    switch (trimmedCmd.toLowerCase()) {
-      case 'help':
-        output = 'Available commands:\n  ls - list files\n  pwd - print working directory\n  date - show current date\n  uptime - show system uptime\n  clear - clear screen\n  help - show this help';
-        break;
-      case 'ls':
-        output = 'Documents  Downloads  Pictures  Videos  projects';
-        break;
-      case 'pwd':
-        output = '/root';
-        break;
-      case 'date':
-        output = new Date().toString();
-        break;
-      case 'uptime':
-        output = 'up 2 days, 5 hours, 23 minutes';
-        break;
-      case 'clear':
-        setHistory([{ type: 'output', text: '' }]);
-        return;
-      default:
-        output = `bash: ${trimmedCmd}: command not found`;
-    }
-
+    const output = commands[trimmedCmd.toLowerCase()] || `bash: ${trimmedCmd}: command not found`;
     setHistory(prev => [...prev, { type: 'output', text: output }, { type: 'output', text: '' }]);
   };
 
@@ -82,13 +70,11 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
     onToggleFullscreen?.(newFullscreen);
     
     if (newFullscreen) {
-      document.documentElement.requestFullscreen().catch(err => {
-        console.error('Error attempting to enable fullscreen:', err);
-      });
-    } else {
-      if (document.fullscreenElement) {
-        document.exitFullscreen();
-      }
+      document.documentElement.requestFullscreen().catch(err => 
+        console.error('Error attempting to enable fullscreen:', err)
+      );
+    } else if (document.fullscreenElement) {
+      document.exitFullscreen();
     }
   };
 

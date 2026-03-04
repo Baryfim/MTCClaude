@@ -83,3 +83,36 @@ export interface UserVM {
   status: VMStatus;
   created_at: string;
 }
+
+export interface VMMetrics {
+  cpu_cores: number;
+  ram_mb: number;
+  status: VMStatus;
+  storage: number;
+}
+
+export interface VMMetricsHistory {
+  vmId: string;
+  timestamp: string;
+  metrics: VMMetrics;
+}
+
+export interface VMMetricsTimeSeries {
+  time: string;
+  cpu: number;
+  ram: number;
+  disk: number;
+  network: number;
+}
+
+export interface VMResourceUpdate {
+  id: string;
+  cpu_cores: number;
+  ram_mb: number;
+  storage: number;
+}
+
+export interface AdminVM extends UserVM {
+  user_email?: string;
+  storage_gb?: number;
+}

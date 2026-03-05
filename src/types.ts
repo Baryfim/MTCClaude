@@ -88,6 +88,9 @@ export interface UserVM {
   image: string;
   cpu_cores: number;
   ram_mb: number;
+  storage?: number;
+  disk_bytes?: string;
+  price_per_hour?: number;
   status: VMStatus;
   created_at: string;
 }
@@ -115,12 +118,15 @@ export interface VMMetricsTimeSeries {
 
 export interface VMResourceUpdate {
   id: number;
-  cpu_cores: number;
-  ram_mb: number;
-  storage: number;
+  name?: string;
+  image?: string;
+  cpu_cores?: number;
+  ram_mb?: number;
+  storage?: number;
+  disk_bytes?: string;
+  price_per_hour?: number;
 }
 
 export interface AdminVM extends UserVM {
   user_email?: string;
-  storage_gb?: number;
 }

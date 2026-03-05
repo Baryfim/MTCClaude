@@ -7,7 +7,7 @@ export const fetchAllUsersVMsAsync = createAsyncThunk(
   'admin/fetchAllUsersVMs',
   async () => {
     if (enableBackend) {
-      return await apiRequestWithAuth<AdminVM[]>('GET', '/v1/admin/vms');
+      return await apiRequestWithAuth<AdminVM[]>('GET', '/v1/resources/');
     }
     return [];
   }
@@ -17,15 +17,8 @@ export const updateVMResourcesAsync = createAsyncThunk(
   'admin/updateVMResources',
   async (data: VMResourceUpdate) => {
     if (enableBackend) {
-      return await apiRequestWithAuth<AdminVM>(
-        'PUT',
-        `/v1/admin/vms/${data.id}/resources`,
-        {
-          cpu_cores: data.cpu_cores,
-          ram_mb: data.ram_mb,
-          storage: data.storage
-        }
-      );
+      const { id, ...updateData } = data;
+      return await apiRequestWithAuth<AdminVM>('PATCH', `/v1/resources/${id}/`, updateData);
     }
     return data as unknown as AdminVM;
   }

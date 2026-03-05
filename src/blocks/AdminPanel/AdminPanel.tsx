@@ -40,9 +40,13 @@ interface UserSession {
 interface EditModalState {
   isOpen: boolean;
   vm: AdminVM | null;
+  name: string;
+  image: string;
   cpuCores: number;
   ramMb: number;
   storage: number;
+  diskBytes: string;
+  pricePerHour: number;
 }
 
 interface AdminPanelProps {
@@ -58,9 +62,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
   const [editModal, setEditModal] = useState<EditModalState>({
     isOpen: false,
     vm: null,
+    name: '',
+    image: '',
     cpuCores: 0,
     ramMb: 0,
-    storage: 0
+    storage: 0,
+    diskBytes: '',
+    pricePerHour: 0
   });
 
   // Загрузить все VM при монтировании
@@ -73,9 +81,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
     setEditModal({
       isOpen: true,
       vm,
+      name: vm.name,
+      image: vm.image,
       cpuCores: vm.cpu_cores,
       ramMb: vm.ram_mb,
-      storage: vm.storage_gb || 0
+      storage: vm.storage || 0,
+      diskBytes: vm.disk_bytes || '',
+      pricePerHour: vm.price_per_hour || 0
     });
   };
 
@@ -83,23 +95,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
   const handleSave = async () => {
     if (!editModal.vm) return;
     
-    const update: VMResourceUpdate = {
-      id: editModal.vm.id.toString(),
-      cpu_cores: editModal.cpuCores,
-      ram_mb: editModal.ramMb,
-      storage: editModal.storage
-    };
+    const update: VMResourceUpdate = { id: editModal.vm.id };
+    
+    if (editModal.name !== editModal.vm.name) update.name = editModal.name;
+    if (editModal.image !== editModal.vm.image) update.image = editModal.image;
+    if (editModal.cpuCores !== editModal.vm.cpu_cores) update.cpu_cores = editModal.cpuCores;
+    if (editModal.ramMb !== editModal.vm.ram_mb) update.ram_mb = editModal.ramMb;
+    if (editModal.storage !== (editModal.vm.storage || 0)) update.storage = editModal.storage;
+    if (editModal.diskBytes !== (editModal.vm.disk_bytes || '')) update.disk_bytes = editModal.diskBytes;
+    if (editModal.pricePerHour !== (editModal.vm.price_per_hour || 0)) update.price_per_hour = editModal.pricePerHour;
     
     await dispatch(updateVMResourcesAsync(update));
-    setEditModal({ isOpen: false, vm: null, cpuCores: 0, ramMb: 0, storage: 0 });
-    
-    // Обновить список VM
+    setEditModal({ isOpen: false, vm: null, name: '', image: '', cpuCores: 0, ramMb: 0, storage: 0, diskBytes: '', pricePerHour: 0 });
     dispatch(fetchAllUsersVMsAsync());
   };
 
   // Закрыть модальное окно
   const handleCloseModal = () => {
-    setEditModal({ isOpen: false, vm: null, cpuCores: 0, ramMb: 0, storage: 0 });
+    setEditModal({ isOpen: false, vm: null, name: '', image: '', cpuCores: 0, ramMb: 0, storage: 0, diskBytes: '', pricePerHour: 0 });
   };
   
   // Fake data for demonstration
@@ -351,7 +364,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
                       </td>
                       <td>{vm.cpu_cores}</td>
                       <td>{vm.ram_mb}</td>
-                      <td>{vm.storage_gb || 'N/A'}</td>
+                      <td>{vm.storage || 'N/A'}</td>
                       <td>{new Date(vm.created_at).toLocaleDateString('ru-RU')}</td>
                       <td>
                         <button
@@ -387,53 +400,43 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
             
             <div className={styles.modalBody}>
               <div className={styles.vmInfo}>
-                <p><strong>VM:</strong> {editModal.vm.name}</p>
                 <p><strong>Пользователь:</strong> {editModal.vm.tenant_name}</p>
                 <p><strong>ID:</strong> {editModal.vm.id}</p>
               </div>
               
               <div className={styles.formGroup}>
-                <label htmlFor="cpuCores">
-                  Ядра CPU
-                </label>
-                <input
-                  id="cpuCores"
-                  type="number"
-                  min="1"
-                  max="64"
-                  value={editModal.cpuCores}
-                  onChange={(e) => setEditModal({ ...editModal, cpuCores: parseInt(e.target.value) || 1 })}
-                />
+                <label htmlFor="name">Имя VM</label>
+                <input id="name" type="text" value={editModal.name} onChange={(e) => setEditModal({ ...editModal, name: e.target.value })} />
               </div>
 
               <div className={styles.formGroup}>
-                <label htmlFor="ramMb">
-                  Оперативная память (MB)
-                </label>
-                <input
-                  id="ramMb"
-                  type="number"
-                  min="512"
-                  max="131072"
-                  step="512"
-                  value={editModal.ramMb}
-                  onChange={(e) => setEditModal({ ...editModal, ramMb: parseInt(e.target.value) || 512 })}
-                />
+                <label htmlFor="image">Образ</label>
+                <input id="image" type="text" value={editModal.image} onChange={(e) => setEditModal({ ...editModal, image: e.target.value })} />
               </div>
 
               <div className={styles.formGroup}>
-                <label htmlFor="storage">
-                  Хранилище (GB)
-                </label>
-                <input
-                  id="storage"
-                  type="number"
-                  min="10"
-                  max="2048"
-                  step="10"
-                  value={editModal.storage}
-                  onChange={(e) => setEditModal({ ...editModal, storage: parseInt(e.target.value) || 10 })}
-                />
+                <label htmlFor="cpuCores">Ядра CPU</label>
+                <input id="cpuCores" type="number" min="1" max="64" value={editModal.cpuCores} onChange={(e) => setEditModal({ ...editModal, cpuCores: parseInt(e.target.value) || 1 })} />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label htmlFor="ramMb">RAM (MB)</label>
+                <input id="ramMb" type="number" min="512" max="131072" step="512" value={editModal.ramMb} onChange={(e) => setEditModal({ ...editModal, ramMb: parseInt(e.target.value) || 512 })} />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label htmlFor="storage">Storage (GB)</label>
+                <input id="storage" type="number" min="10" max="2048" step="10" value={editModal.storage} onChange={(e) => setEditModal({ ...editModal, storage: parseInt(e.target.value) || 10 })} />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label htmlFor="diskBytes">Disk Bytes</label>
+                <input id="diskBytes" type="text" value={editModal.diskBytes} onChange={(e) => setEditModal({ ...editModal, diskBytes: e.target.value })} />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label htmlFor="pricePerHour">Цена/час</label>
+                <input id="pricePerHour" type="number" min="0" step="0.01" value={editModal.pricePerHour} onChange={(e) => setEditModal({ ...editModal, pricePerHour: parseFloat(e.target.value) || 0 })} />
               </div>
             </div>
 

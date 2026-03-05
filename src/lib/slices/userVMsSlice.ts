@@ -34,7 +34,7 @@ export const stopVMAsync = createAsyncThunk(
 export const deleteVMAsync = createAsyncThunk(
   'userVMs/deleteVM',
   async (vmId: string) => {
-    await axios.post(`${apiUrl}/v1/resources/${vmId}/delete`);
+    await axios.delete(`${apiUrl}/v1/resources/${vmId}`);
     return vmId;
   }
 );

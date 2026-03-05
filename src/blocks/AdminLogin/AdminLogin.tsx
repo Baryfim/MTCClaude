@@ -44,8 +44,8 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin }) => {
           >
             <ShieldCheck className="w-10 h-10 text-white" />
           </motion.div>
-          <h1 className={styles.title}>Админ-панель</h1>
-          <p className={styles.subtitle}>Управление облачной платформой</p>
+          <h1 className={styles.title}>МТСОблачко</h1>
+          <p className={styles.subtitle}>Админ-панель</p>
         </div>
 
         <motion.div

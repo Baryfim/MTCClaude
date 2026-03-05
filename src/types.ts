@@ -41,22 +41,22 @@ export const PLATFORMS: CloudPlatform[] = [
 ];
 
 export const INSTANCE_TYPES: VMInstance[] = [
-  { id: 't3-micro', name: 'Стандартный Нано', cpu: 1, ram: 1, storage: 20, pricePerHour: 0.012, tier: 'Общего назначения' },
-  { id: 't3-small', name: 'Стандартный Малый', cpu: 2, ram: 2, storage: 40, pricePerHour: 0.024, tier: 'Общего назначения' },
-  { id: 'm5-large', name: 'Стандартный Средний', cpu: 2, ram: 8, storage: 80, pricePerHour: 0.096, tier: 'Общего назначения' },
-  { id: 'c5-xlarge', name: 'Вычислительный Про', cpu: 4, ram: 8, storage: 160, pricePerHour: 0.17, tier: 'Оптимизировано для вычислений' },
-  { id: 'r5-2xlarge', name: 'Память Ультра', cpu: 8, ram: 64, storage: 320, pricePerHour: 0.50, tier: 'Оптимизировано для памяти' },
+  { id: 't3-micro', name: 'Стандартный Нано', cpu: 1, ram: 512, storage: 20, pricePerHour: 0.012, tier: 'Общего назначения' },
+  { id: 't3-small', name: 'Стандартный Малый', cpu: 2, ram: 1024, storage: 40, pricePerHour: 0.024, tier: 'Общего назначения' },
+  { id: 'm5-large', name: 'Стандартный Средний', cpu: 2, ram: 2048, storage: 80, pricePerHour: 0.096, tier: 'Общего назначения' },
+  { id: 'c5-xlarge', name: 'Вычислительный Про', cpu: 4, ram: 4096, storage: 160, pricePerHour: 0.17, tier: 'Оптимизировано для вычислений' },
+  { id: 'r5-2xlarge', name: 'Память Ультра', cpu: 8, ram: 65536, storage: 320, pricePerHour: 0.50, tier: 'Оптимизировано для памяти' },
 ];
 
 export interface VMSnapshot {
-  id: string;
+  id: number;
   name: string;
   createdAt: string;
   size: string;
 }
 
 export interface DeployedVM {
-  id: string;
+  id: number;
   name: string;
   hostname: string;
   status: 'running' | 'stopped' | 'creating' | 'error';
@@ -71,7 +71,7 @@ export interface DeployedVM {
 }
 
 export interface Activity {
-  id: string;
+  id: number;
   action: string;
   vmName: string;
   timestamp: string;
@@ -100,7 +100,7 @@ export interface VMMetrics {
 }
 
 export interface VMMetricsHistory {
-  vmId: string;
+  vmId: number;
   timestamp: string;
   metrics: VMMetrics;
 }
@@ -114,7 +114,7 @@ export interface VMMetricsTimeSeries {
 }
 
 export interface VMResourceUpdate {
-  id: string;
+  id: number;
   cpu_cores: number;
   ram_mb: number;
   storage: number;

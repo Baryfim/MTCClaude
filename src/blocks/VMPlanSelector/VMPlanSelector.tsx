@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Cpu, MemoryStick, HardDrive, Zap, Check, ChevronRight } from 'lucide-react';
-import { INSTANCE_TYPES, VMInstance } from '../../types';
+import { INSTANCE_TYPES, VMInstance, UserVM } from '../../types';
 import styles from './VMPlanSelector.module.scss';
-import axios from 'axios';
-const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-const enableBackend = import.meta.env.VITE_ENABLE_BACKEND === '1';
+import { apiRequestWithAuth, enableBackend } from '../../lib/api';
 
 interface VMPlanSelectorProps {
-  onSelect: (instance: VMInstance) => void;
+  onSelect: (instance: VMInstance, vmFromServer?: UserVM) => void;
 }
 
 interface OSOption {
@@ -47,19 +45,29 @@ export const VMPlanSelector: React.FC<VMPlanSelectorProps> = ({ onSelect }) => {
     if (!selectedPlan || !selectedOS) return;
 
     const selectedOSOption = OS_OPTIONS.find(os => os.id === selectedOS);
+    let createdVM: UserVM | undefined;
 
     if (enableBackend) {
-      await axios.post(`${apiUrl}/api/auth`, {
-        name: selectedPlan.name,
-        image: selectedOSOption?.name || "standard unix OS",
-        cpu_cores: selectedPlan.cpu,
-        ram_mb: selectedPlan.ram,
-        storage: selectedPlan.storage,
-        price_per_hour: selectedPlan.pricePerHour
-      });
+      try {
+        createdVM = await apiRequestWithAuth<UserVM>(
+          'POST',
+          '/v1/resources/',
+          {
+            name: "new",
+            image: "new",
+            cpu_cores: selectedPlan.cpu,
+            ram_mb: selectedPlan.ram,
+            storage: selectedPlan.storage,
+            price_per_hour: selectedPlan.pricePerHour
+          }
+        );
+      } catch (error) {
+        console.error('Ошибка при создании VM:', error);
+        return;
+      }
     }
 
-    onSelect(selectedPlan);
+    onSelect(selectedPlan, createdVM);
   };
 
   const handleBackToPlans = () => {
@@ -131,7 +139,7 @@ export const VMPlanSelector: React.FC<VMPlanSelectorProps> = ({ onSelect }) => {
                         </div>
                         <div className={styles.spec}>
                           <MemoryStick />
-                          <span>{instance.ram} ГБ RAM</span>
+                          <span>{instance.ram} МБ RAM</span>
                         </div>
                         <div className={styles.spec}>
                           <HardDrive />
@@ -174,7 +182,7 @@ export const VMPlanSelector: React.FC<VMPlanSelectorProps> = ({ onSelect }) => {
                 <div className={styles.summarySpecs}>
                   <span>{selectedPlan.cpu} vCPU</span>
                   <span>•</span>
-                  <span>{selectedPlan.ram} ГБ RAM</span>
+                  <span>{selectedPlan.ram} МБ RAM</span>
                   <span>•</span>
                   <span>{selectedPlan.storage} ГБ Storage</span>
                 </div>
@@ -209,8 +217,8 @@ export const VMPlanSelector: React.FC<VMPlanSelectorProps> = ({ onSelect }) => {
               <button onClick={handleBackToPlans} className={styles.backButton}>
                 Назад к тарифам
               </button>
-              <button 
-                onClick={handleCreateVM} 
+              <button
+                onClick={handleCreateVM}
                 disabled={!selectedOS}
                 className={styles.createButton}
               >

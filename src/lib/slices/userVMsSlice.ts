@@ -1,13 +1,11 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 import { DeployedVM, Activity } from '../../types';
-import axios from 'axios';
-
-const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-const enableBackend = import.meta.env.VITE_ENABLE_BACKEND === '1';
+import { apiRequestWithAuth, enableBackend } from '../api';
+import { fetchAllVMMetricsAsync } from './vmMetricsSlice';
 
 const addActivity = (state: UserVMsState, action: string, vmName: string) => {
   state.activities.unshift({
-    id: `act-${Date.now()}`,
+    id: Date.now(),
     action,
     vmName,
     timestamp: new Date().toLocaleString('ru-RU'),
@@ -16,11 +14,25 @@ const addActivity = (state: UserVMsState, action: string, vmName: string) => {
 };
 
 // Асинхронные thunks для управления VM пользователя
+export const checkVMStatusAsync = createAsyncThunk(
+  'userVMs/checkVMStatus',
+  async (vmId: number) => {
+    if (enableBackend) {
+      const response = await apiRequestWithAuth<{ status: string }>('GET', `/v1/resources/${vmId}/`);
+      return { vmId, status: response.status };
+    }
+    return { vmId, status: 'active' };
+  }
+);
+
 export const startVMAsync = createAsyncThunk(
   'userVMs/startVM',
-  async (vmId: string) => {
+  async (vmId: number, { dispatch }) => {
     if (enableBackend) {
-      await axios.post(`${apiUrl}/v1/resources/${vmId}/start/`);
+      await apiRequestWithAuth('POST', `/v1/resources/${vmId}/start/`);
+      setTimeout(() => {
+        dispatch(checkVMStatusAsync(vmId));
+      }, 4500);
     }
     return vmId;
   }
@@ -28,9 +40,10 @@ export const startVMAsync = createAsyncThunk(
 
 export const stopVMAsync = createAsyncThunk(
   'userVMs/stopVM',
-  async (vmId: string) => {
+  async (vmId: number) => {
     if (enableBackend) {
-      await axios.post(`${apiUrl}/v1/resources/${vmId}/stop/`);
+      await apiRequestWithAuth('POST', `/v1/resources/${vmId}/stop/`);
+      await new Promise(resolve => setTimeout(resolve, 3000));
     }
     return vmId;
   }
@@ -38,9 +51,9 @@ export const stopVMAsync = createAsyncThunk(
 
 export const deleteVMAsync = createAsyncThunk(
   'userVMs/deleteVM',
-  async (vmId: string) => {
+  async (vmId: number) => {
     if (enableBackend) {
-      await axios.delete(`${apiUrl}/v1/resources/${vmId}`);
+      await apiRequestWithAuth('DELETE', `/v1/resources/${vmId}`);
     }
     return vmId;
   }
@@ -71,7 +84,7 @@ const userVMsSlice = createSlice({
       addActivity(state, 'Создана ВМ', action.payload.name);
     },
 
-    restartVM: (state, action: PayloadAction<string>) => {
+    restartVM: (state, action: PayloadAction<number>) => {
       const vm = state.activeVMs.find(vm => vm.id === action.payload);
       if (vm) addActivity(state, 'Перезапущена ВМ', vm.name);
     },
@@ -113,14 +126,33 @@ const userVMsSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      .addCase(startVMAsync.pending, (state, action) => {
+        const vmId = action.meta.arg;
+        const vm = state.inactiveVMs.find(v => v.id === vmId) || state.activeVMs.find(v => v.id === vmId);
+        if (vm) vm.status = 'creating';
+      })
       .addCase(startVMAsync.fulfilled, (state, action) => {
         const vmIndex = state.inactiveVMs.findIndex(vm => vm.id === action.payload);
         if (vmIndex !== -1) {
           const vm = state.inactiveVMs[vmIndex];
-          vm.status = 'running';
-          state.activeVMs.push(vm);
-          state.inactiveVMs.splice(vmIndex, 1);
-          addActivity(state, 'Запущена ВМ', vm.name);
+          vm.status = 'creating';
+          addActivity(state, 'Запуск ВМ', vm.name);
+        }
+      })
+      .addCase(checkVMStatusAsync.fulfilled, (state, action) => {
+        const { vmId, status } = action.payload;
+        if (status === 'active') {
+          const vmIndex = state.inactiveVMs.findIndex(vm => vm.id === vmId);
+          if (vmIndex !== -1) {
+            const vm = state.inactiveVMs[vmIndex];
+            vm.status = 'running';
+            state.activeVMs.push(vm);
+            state.inactiveVMs.splice(vmIndex, 1);
+            addActivity(state, 'Запущена ВМ', vm.name);
+          } else {
+            const activeVM = state.activeVMs.find(vm => vm.id === vmId);
+            if (activeVM) activeVM.status = 'running';
+          }
         }
       })
       .addCase(stopVMAsync.fulfilled, (state, action) => {
@@ -142,6 +174,36 @@ const userVMsSlice = createSlice({
           state.inactiveVMs = state.inactiveVMs.filter(vm => vm.id !== action.payload);
           addActivity(state, 'Удалена ВМ', deletedVM.name);
         }
+      })
+      .addCase(fetchAllVMMetricsAsync.fulfilled, (state, action) => {
+        console.log('📊 [userVMsSlice] Обновление VM метриками:', action.payload);
+        
+        // Обновить метрики для каждой VM
+        action.payload.forEach(({ vmId, metrics }) => {
+          // Поиск VM в активных
+          const activeVMIndex = state.activeVMs.findIndex(vm => vm.id === vmId);
+          if (activeVMIndex !== -1) {
+            const vm = state.activeVMs[activeVMIndex];
+            console.log(`🔄 [userVMsSlice] Обновление метрик для активной VM ${vmId}:`, metrics);
+            
+            // ВАЖНО: VMMetrics от сервера содержит cpu_cores, ram_mb, storage, status
+            // Нужно добавить реальные метрики использования в процентах от сервера
+            // Пока логгируем что приходит
+            console.warn(`⚠️ [userVMsSlice] VMMetrics не содержит данных об использовании ресурсов в процентах`);
+            console.log(`ℹ️ [userVMsSlice] Получено:`, {
+              cpu_cores: metrics.cpu_cores,
+              ram_mb: metrics.ram_mb,
+              storage: metrics.storage,
+              status: metrics.status
+            });
+          }
+          
+          // Поиск VM в неактивных
+          const inactiveVMIndex = state.inactiveVMs.findIndex(vm => vm.id === vmId);
+          if (inactiveVMIndex !== -1) {
+            console.log(`ℹ️ [userVMsSlice] VM ${vmId} найдена в неактивных`);
+          }
+        });
       });
   },
 });

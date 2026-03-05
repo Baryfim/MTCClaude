@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Monitor, Maximize2, Minimize2, Settings, Terminal, X } from 'lucide-react';
 import styles from './AdminDesktop.module.scss';
+import { apiRequestWithAuth } from '../../lib/api';
 
 interface AdminDesktopProps {
-  vmId: string;
+  vmId: number;
   vmName?: string;
   isFullscreen?: boolean;
   onToggleFullscreen?: (isFullscreen: boolean) => void;
@@ -25,6 +26,19 @@ export const AdminDesktop: React.FC<AdminDesktopProps> = ({
   const [showSettings, setShowSettings] = useState(false);
   const [quality, setQuality] = useState<'low' | 'medium' | 'high'>('high');
   const [showStats, setShowStats] = useState(true);
+  const [guiUrl, setGuiUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchGuiUrl = async () => {
+      try {
+        const response = await apiRequestWithAuth<{ url: string }>('GET', `/v1/resources/${vmId}/console/gui/`);
+        setGuiUrl(response.url);
+      } catch (error) {
+        console.error('Ошибка получения GUI URL:', error);
+      }
+    };
+    fetchGuiUrl();
+  }, [vmId]);
 
   const toggleFullscreen = () => {
     const newFullscreen = !isFullscreen;
@@ -117,49 +131,28 @@ export const AdminDesktop: React.FC<AdminDesktopProps> = ({
       </div>
 
       <div className={styles.desktopView}>
-        <div className={styles.desktopContent}>
-          <div className={styles.desktopCenter}>
-            <div className={styles.iconBox}>
-              <Monitor className="w-16 h-16 text-blue-400" />
-            </div>
-            <h2 className={styles.desktopTitle}>Ubuntu Desktop</h2>
-            <p className={styles.desktopSubtitle}>Remote desktop session active</p>
-            {showStats && (
-              <div className={styles.statsContainer}>
-                <div className={styles.statCard}>
-                  <div className={styles.statLabel}>Resolution</div>
-                  <div className={styles.statValue}>1920x1080</div>
-                </div>
-                <div className={styles.statCard}>
-                  <div className={styles.statLabel}>FPS</div>
-                  <div className={styles.statValue}>60</div>
-                </div>
-                <div className={styles.statCard}>
-                  <div className={styles.statLabel}>Latency</div>
-                  <div className={styles.statValue}>12ms</div>
-                </div>
-                <div className={styles.statCard}>
-                  <div className={styles.statLabel}>Quality</div>
-                  <div className={styles.statValue} style={{ textTransform: 'capitalize' }}>{quality}</div>
-                </div>
+        {guiUrl ? (
+          <iframe 
+            src={guiUrl} 
+            style={{ 
+              width: '100%', 
+              height: '100%', 
+              border: 'none',
+              display: 'block'
+            }}
+            title="Remote Desktop"
+          />
+        ) : (
+          <div className={styles.desktopContent}>
+            <div className={styles.desktopCenter}>
+              <div className={styles.iconBox}>
+                <Monitor className="w-16 h-16 text-blue-400" />
               </div>
-            )}
+              <h2 className={styles.desktopTitle}>Загрузка...</h2>
+              <p className={styles.desktopSubtitle}>Подключение к удаленному рабочему столу</p>
+            </div>
           </div>
-        </div>
-
-        <div className={styles.connectionInfo}>
-          <div className={styles.connectionDot} />
-          <span>Connected via RDP</span>
-        </div>
-
-        <div className={styles.taskbar}>
-          <button className={styles.startButton}>
-            <div className={styles.windowIcon} />
-          </button>
-          <button className={styles.appIcon}>📁</button>
-          <button className={styles.appIcon}>🌐</button>
-          <button className={styles.appIcon}>📝</button>
-        </div>
+        )}
       </div>
     </div>
   );

@@ -58,13 +58,13 @@
 
   &.active {
     .stepNumber {
-      background: black;
-      border-color: black;
+      background: #ef4444;
+      border-color: #ef4444;
       color: white;
     }
 
     .stepLabel {
-      color: black;
+      color: #ef4444;
     }
   }
 
@@ -95,7 +95,7 @@
     left: 0;
     height: 100%;
     width: 0;
-    background: black;
+    background: #ef4444;
     transition: width 0.5s ease;
 
     &.filled {
@@ -157,14 +157,14 @@
   color: rgba(0, 0, 0, 0.6);
 
   &:hover {
-    border-color: rgba(0, 0, 0, 0.3);
-    color: black;
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #ef4444;
   }
 
   &.active {
-    background: black;
+    background: #ef4444;
     color: white;
-    border-color: black;
+    border-color: #ef4444;
   }
 }
 
@@ -299,7 +299,7 @@
 }
 
 .planItem:hover .selectArrow {
-  color: black;
+  color: #ef4444;
   transform: translateX(4px);
 }
 
@@ -351,16 +351,16 @@
   gap: 1rem;
 
   &:hover {
-    border-color: rgba(0, 0, 0, 0.3);
+    border-color: rgba(239, 68, 68, 0.3);
     transform: translateX(4px);
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
   }
 
   &.selected {
-    border-color: black;
+    border-color: #ef4444;
     border-width: 2px;
-    background: rgba(0, 0, 0, 0.02);
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+    background: rgba(239, 68, 68, 0.02);
+    box-shadow: 0 10px 25px -5px rgba(239, 68, 68, 0.15);
   }
 }
 
@@ -392,7 +392,7 @@
 }
 
 .checkIcon {
-  background: black;
+  background: #ef4444;
   color: white;
   width: 1.75rem;
   height: 1.75rem;
@@ -433,14 +433,14 @@
   transition: all 0.3s;
 
   &:hover {
-    border-color: black;
-    background: rgba(0, 0, 0, 0.05);
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.02);
   }
 }
 
 .createButton {
   padding: 0.75rem 1.5rem;
-  background: black;
+  background: #ef4444;
   color: white;
   border: none;
   border-radius: 9999px;
@@ -451,8 +451,8 @@
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 
   &:hover:not(:disabled) {
+    background: #dc2626;
     transform: scale(1.02);
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   }
 
   &:active:not(:disabled) {

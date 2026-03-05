@@ -29,14 +29,14 @@
 
 .createButton {
   padding: 0.75rem 1.25rem;
-  background: black;
+  background: #ef4444;
   color: white;
   border-radius: 9999px;
   font-weight: 500;
   font-size: 0.813rem;
   border: none;
   cursor: pointer;
-  transition: transform 0.3s;
+  transition: all 0.3s;
   white-space: nowrap;
   flex-shrink: 0;
 
@@ -46,6 +46,7 @@
   }
 
   &:hover {
+    background: #dc2626;
     transform: scale(1.05);
   }
 }
@@ -177,7 +178,7 @@
   }
 
   &:hover {
-    background: black;
+    background: #ef4444;
     color: white;
   }
 
@@ -374,7 +375,7 @@
   }
 
   &:hover {
-    color: black;
+    color: #ef4444;
   }
 }
 
@@ -393,7 +394,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.625rem 1.25rem;
-  background: black;
+  background: #ef4444;
   color: white;
   border: none;
   border-radius: 0.75rem;
@@ -409,8 +410,8 @@
   }
 
   &:hover {
+    background: #dc2626;
     transform: scale(1.02);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   }
 
   &:active {
@@ -518,8 +519,8 @@
   }
 
   &:hover {
-    background: rgba(0, 0, 0, 0.1);
-    color: black;
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
   }
 
   &.restore {
@@ -554,7 +555,7 @@
     transition: border-color 0.3s;
 
     &:focus {
-      border-color: black;
+      border-color: #ef4444;
     }
   }
 }
@@ -615,7 +616,7 @@
   justify-content: center;
   gap: 0.5rem;
   padding: 0.75rem 1.25rem;
-  background: black;
+  background: #ef4444;
   color: white;
   border-radius: 1rem;
   font-weight: 500;
@@ -635,6 +636,7 @@
   }
 
   &:hover:not(:disabled) {
+    background: #dc2626;
     transform: scale(1.02);
   }
 
@@ -676,7 +678,7 @@
   }
 
   &:hover:not(:disabled) {
-    background: black;
+    background: #ef4444;
     color: white;
   }
 

@@ -1,14 +1,42 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { User, Lock, AlertCircle, X, Building2 } from 'lucide-react';
+import { User, Lock, AlertCircle, X, Building2, Trash2 } from 'lucide-react';
 import styles from './UserLogin.module.scss';
-import axios from 'axios';
+import { apiRequest, enableBackend } from '../../lib/api';
 
 interface UserLoginProps {
   onLogin: (username: string) => void;
   onClose: () => void;
   mode: 'login' | 'register';
 }
+
+const setCookie = (name: string, value: string, days = 7) => {
+  const expires = new Date(Date.now() + days * 864e5).toUTCString();
+  document.cookie = `${name}=${value}; expires=${expires}; path=/; SameSite=Lax`;
+};
+
+const getCookie = (name: string): string => {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? match[2] : '';
+};
+
+const getProfiles = (): string[] => {
+  const profiles = getCookie('user_profiles');
+  return profiles ? JSON.parse(decodeURIComponent(profiles)) : [];
+};
+
+const saveProfile = (username: string) => {
+  const profiles = getProfiles();
+  if (!profiles.includes(username)) {
+    profiles.unshift(username);
+    setCookie('user_profiles', encodeURIComponent(JSON.stringify(profiles.slice(0, 5))), 365);
+  }
+};
+
+const removeProfile = (username: string) => {
+  const profiles = getProfiles().filter(p => p !== username);
+  setCookie('user_profiles', encodeURIComponent(JSON.stringify(profiles)), 365);
+};
 
 export const UserLogin: React.FC<UserLoginProps> = ({ onLogin, onClose, mode }) => {
   const [username, setUsername] = useState('');
@@ -17,8 +45,11 @@ export const UserLogin: React.FC<UserLoginProps> = ({ onLogin, onClose, mode }) 
   const [companyName, setCompanyName] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const apiUrl = import.meta.env.VITE_API_URL;
-  const enableBackend = import.meta.env.VITE_ENABLE_BACKEND === '1';
+  const [savedProfiles, setSavedProfiles] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (mode === 'login') setSavedProfiles(getProfiles());
+  }, [mode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,14 +74,41 @@ export const UserLogin: React.FC<UserLoginProps> = ({ onLogin, onClose, mode }) 
     await new Promise(resolve => setTimeout(resolve, 800));
 
     if (enableBackend) {
-      await axios.post(`${apiUrl}/api/auth`, {
-        username,
-        password,
-        company_name: mode === 'register' ? companyName : undefined
-      });
+      try {
+        const endpoint = mode === 'login' ? '/v1/login/' : '/v1/register/';
+        const data = mode === 'login'
+          ? { username, password }
+          : { username, password, company_name: companyName };
+
+        const tokens = await apiRequest<{ access: string; refresh: string }>(
+          'POST',
+          endpoint,
+          data
+        );
+
+        setCookie('access_token', tokens.access);
+        setCookie('refresh_token', tokens.refresh);
+
+        console.log('Токены:', tokens);
+      } catch (err) {
+        setError('Ошибка при выполнении запроса');
+        setIsLoading(false);
+        return;
+      }
     }
 
+    saveProfile(username);
     onLogin(username);
+  };
+
+  const handleSelectProfile = (profile: string) => {
+    setUsername(profile);
+  };
+
+  const handleDeleteProfile = (profile: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    removeProfile(profile);
+    setSavedProfiles(getProfiles());
   };
 
   return (
@@ -76,9 +134,36 @@ export const UserLogin: React.FC<UserLoginProps> = ({ onLogin, onClose, mode }) 
           >
             <User className="w-8 h-8" />
           </motion.div>
-          <h2>{mode === 'login' ? 'Вход' : 'Регистрация'}</h2>
-          <p>{mode === 'login' ? 'Войдите в свой аккаунт' : 'Создайте новый аккаунт'}</p>
+          <h2>МТСОблачко</h2>
+          <p className={styles.subtitle}>{mode === 'login' ? 'Вход' : 'Регистрация'}</p>
+          <p className={styles.description}>{mode === 'login' ? 'Войдите в свой аккаунт' : 'Создайте новый аккаунт'}</p>
         </div>
+
+        {mode === 'login' && savedProfiles.length > 0 && (
+          <div className={styles.savedProfiles}>
+            <p className={styles.savedProfilesTitle}>Сохраненные профили:</p>
+            <div className={styles.profilesList}>
+              {savedProfiles.map((profile) => (
+                <button
+                  key={profile}
+                  type="button"
+                  onClick={() => handleSelectProfile(profile)}
+                  className={styles.profileItem}
+                >
+                  <User />
+                  <span>{profile}</span>
+                  <button
+                    onClick={(e) => handleDeleteProfile(profile, e)}
+                    className={styles.deleteProfile}
+                    title="Удалить профиль"
+                  >
+                    <Trash2 />
+                  </button>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.formGroup}>

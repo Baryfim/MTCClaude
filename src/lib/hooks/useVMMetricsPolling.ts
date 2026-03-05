@@ -10,13 +10,14 @@ import { selectActiveVMs } from '../slices/userVMsSlice';
  * @param enabled - включить/выключить опрос (по умолчанию true)
  * @param interval - интервал опроса в миллисекундах (по умолчанию 10000 = 10 секунд)
  */
-export const useVMMetricsPolling = (enabled: boolean = true, interval: number = 10000) => {
+export const useVMMetricsPolling = (enabled: boolean = true, interval: number = 5000) => {
   const dispatch = useAppDispatch();
   const activeVMs = useAppSelector(selectActiveVMs);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!enabled) {
+      console.log('⏸️ [Метрики] Опрос метрик отключен');
       // Очистить интервал если опрос отключен
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -24,23 +25,30 @@ export const useVMMetricsPolling = (enabled: boolean = true, interval: number = 
       }
       return;
     }
+    
+    console.log('▶️ [Метрики] Опрос метрик включен (интервал:', interval, 'мс)');
 
     // Функция для получения метрик всех активных VM
     const fetchMetrics = () => {
-      // Получить ID всех активных VM (со статусом RUNNING)
+      // Получить ID всех активных VM
       const runningVMIds = activeVMs
-        .filter(vm => vm.status === 'running')
         .map(vm => vm.id);
 
+      console.log('📊 [Метрики] Запрос метрик для VM:', runningVMIds);
+      
       if (runningVMIds.length > 0) {
         dispatch(fetchAllVMMetricsAsync(runningVMIds));
+      } else {
+        console.log('⚠️ [Метрики] Нет активных VM для запроса метрик');
       }
     };
 
     // Запустить первый запрос сразу
+    console.log('🔄 [Метрики] Первый запрос метрик...');
     fetchMetrics();
 
     // Установить интервал для периодических запросов
+    console.log('⏰ [Метрики] Установлен интервал опроса:', interval, 'мс');
     intervalRef.current = setInterval(fetchMetrics, interval);
 
     // Cleanup функция
@@ -55,7 +63,6 @@ export const useVMMetricsPolling = (enabled: boolean = true, interval: number = 
   // Функция для ручного запроса метрик
   const fetchMetricsManually = () => {
     const runningVMIds = activeVMs
-      .filter(vm => vm.status === 'running')
       .map(vm => vm.id);
 
     if (runningVMIds.length > 0) {

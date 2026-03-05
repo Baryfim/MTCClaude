@@ -1,17 +1,13 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { AdminVM, VMResourceUpdate } from '../../types';
-import axios from 'axios';
-
-const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-const enableBackend = import.meta.env.VITE_ENABLE_BACKEND === '1';
+import { apiRequestWithAuth, enableBackend } from '../api';
 
 // Асинхронные thunks для админа
 export const fetchAllUsersVMsAsync = createAsyncThunk(
   'admin/fetchAllUsersVMs',
   async () => {
     if (enableBackend) {
-      const response = await axios.get<AdminVM[]>(`${apiUrl}/v1/admin/vms/`);
-      return response.data;
+      return await apiRequestWithAuth<AdminVM[]>('GET', '/v1/admin/vms');
     }
     return [];
   }
@@ -21,14 +17,17 @@ export const updateVMResourcesAsync = createAsyncThunk(
   'admin/updateVMResources',
   async (data: VMResourceUpdate) => {
     if (enableBackend) {
-      const response = await axios.put(`${apiUrl}/v1/admin/vms/${data.id}/resources/`, {
-        cpu_cores: data.cpu_cores,
-        ram_mb: data.ram_mb,
-        storage: data.storage
-      });
-      return response.data;
+      return await apiRequestWithAuth<AdminVM>(
+        'PUT',
+        `/v1/admin/vms/${data.id}/resources`,
+        {
+          cpu_cores: data.cpu_cores,
+          ram_mb: data.ram_mb,
+          storage: data.storage
+        }
+      );
     }
-    return data as AdminVM;
+    return data as unknown as AdminVM;
   }
 );
 

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Terminal, Maximize2, Minimize2, Settings, Monitor, X } from 'lucide-react';
 import styles from './AdminConsole.module.scss';
+import { apiRequestWithAuth } from '../../lib/api';
 
 interface AdminConsoleProps {
-  vmId: string;
+  vmId: number;
   vmName?: string;
   isFullscreen?: boolean;
   onToggleFullscreen?: (isFullscreen: boolean) => void;
@@ -34,6 +35,19 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
     { type: 'output', text: '' },
   ]);
   const terminalRef = useRef<HTMLDivElement>(null);
+  const [cliUrl, setCliUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCliUrl = async () => {
+      try {
+        const response = await apiRequestWithAuth<{ url: string }>('GET', `/v1/resources/${vmId}/console/cli/`);
+        setCliUrl(response.url);
+      } catch (error) {
+        console.error('Ошибка получения CLI URL:', error);
+      }
+    };
+    fetchCliUrl();
+  }, [vmId]);
 
   useEffect(() => {
     if (terminalRef.current) {
@@ -157,28 +171,43 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
         </div>
       </div>
 
-      <div ref={terminalRef} className={styles.terminal} style={{ fontSize: `${fontSize}px` }}>
-        {history.map((line, idx) => (
-          <div 
-            key={idx} 
-            className={`${styles.terminalLine} ${line.type === 'input' ? styles.input : `${styles.output} ${styles[theme]}`}`}
-          >
-            {line.text}
-          </div>
-        ))}
-      </div>
-
-      <form onSubmit={handleSubmit} className={styles.inputForm}>
-        <span className={`${styles.inputPrompt} ${styles[theme]}`}>root@{vmName}:~$</span>
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          className={styles.commandInput}
-          placeholder="Type a command..."
-          autoFocus
+      {cliUrl ? (
+        <iframe 
+          src={cliUrl} 
+          style={{ 
+            width: '100%', 
+            height: 'calc(100% - 60px)',
+            border: 'none',
+            display: 'block'
+          }}
+          title="Remote Console"
         />
-      </form>
+      ) : (
+        <>
+          <div ref={terminalRef} className={styles.terminal} style={{ fontSize: `${fontSize}px` }}>
+            {history.map((line, idx) => (
+              <div 
+                key={idx} 
+                className={`${styles.terminalLine} ${line.type === 'input' ? styles.input : `${styles.output} ${styles[theme]}`}`}
+              >
+                {line.text}
+              </div>
+            ))}
+          </div>
+
+          <form onSubmit={handleSubmit} className={styles.inputForm}>
+            <span className={`${styles.inputPrompt} ${styles[theme]}`}>root@{vmName}:~$</span>
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              className={styles.commandInput}
+              placeholder="Type a command..."
+              autoFocus
+            />
+          </form>
+        </>
+      )}
     </div>
   );
 };

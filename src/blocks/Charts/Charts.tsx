@@ -8,7 +8,7 @@ import { VMMetricsTimeSeries } from '../../types';
 import styles from './Charts.module.scss';
 
 interface ChartsProps {
-  vmId?: string; // Опционально: показывать метрики конкретной VM
+  vmId?: number; // Опционально: показывать метрики конкретной VM
 }
 
 export const Charts: React.FC<ChartsProps> = ({ vmId }) => {
@@ -17,26 +17,19 @@ export const Charts: React.FC<ChartsProps> = ({ vmId }) => {
 
   // Преобразовать историю метрик в формат для графиков
   const chartData = useMemo<VMMetricsTimeSeries[]>(() => {
+    console.log('📊 [График] Пересчет данных, vmId:', vmId);
+    console.log('📊 [График] История метрик:', metricsHistory);
+    
     // Фильтровать по конкретной VM если указано
     const relevantHistory = vmId 
       ? metricsHistory.filter(h => h.vmId === vmId)
       : metricsHistory;
 
+    console.log('📊 [График] Фильтрованная история:', relevantHistory.length, 'записей');
+
     if (relevantHistory.length === 0) {
-      // Если нет данных, вернуть mock данные
-      const mockData: VMMetricsTimeSeries[] = [];
-      for (let i = 23; i >= 0; i--) {
-        const hour = new Date();
-        hour.setHours(hour.getHours() - i);
-        mockData.push({
-          time: `${hour.getHours()}:00`,
-          cpu: Math.floor(Math.random() * 40) + 30 + Math.sin(i / 3) * 15,
-          ram: Math.floor(Math.random() * 35) + 40 + Math.cos(i / 4) * 20,
-          disk: Math.floor(Math.random() * 20) + 25,
-          network: Math.floor(Math.random() * 50) + 20
-        });
-      }
-      return mockData;
+      console.warn('⚠️ [График] Нет данных для отображения');
+      return [];
     }
 
     // Группировать метрики по времени (округлять до минут)
@@ -46,13 +39,19 @@ export const Charts: React.FC<ChartsProps> = ({ vmId }) => {
       const date = new Date(timestamp);
       const timeKey = `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
       
+      console.log(`🕒 [График] Метрика в ${timeKey}:`, metrics);
+      
       if (!timeGrouped.has(timeKey)) {
+        // ВАЖНО: Сервер возвращает конфигурацию, а не использование в %
+        // TODO: Когда API вернет реальные метрики использования, использовать их
+        console.warn(`⚠️ [График] API возвращает конфигурацию, а не % использования`);
+        
         timeGrouped.set(timeKey, {
           time: timeKey,
-          cpu: metrics.cpu_cores || 0,
-          ram: metrics.ram_mb ? (metrics.ram_mb / 1024) : 0, // Конвертировать в GB для отображения
-          disk: metrics.storage || 0,
-          network: Math.random() * 50 + 20 // TODO: добавить реальные данные сети когда API будет готов
+          cpu: 0, // Ожидаем cpu_usage_percent от API
+          ram: 0, // Ожидаем ram_usage_percent от API
+          disk: 0, // Ожидаем disk_usage_percent от API
+          network: 0 // Ожидаем network_usage от API
         });
       }
     });
@@ -61,7 +60,8 @@ export const Charts: React.FC<ChartsProps> = ({ vmId }) => {
     const sortedData = Array.from(timeGrouped.values())
       .slice(-24);
 
-    return sortedData.length > 0 ? sortedData : [];
+    console.log('📊 [График] Итоговые данные:', sortedData);
+    return sortedData;
   }, [metricsHistory, vmId]);
 
   // Показать информацию о том, что отображается

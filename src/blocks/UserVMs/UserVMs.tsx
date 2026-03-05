@@ -33,26 +33,26 @@ export interface DeployedVM {
 
 interface UserVMsProps {
   vms: DeployedVM[];
-  onVMAction: (vmId: string, action: 'start' | 'stop' | 'restart' | 'delete') => void;
-  onOpenConsole: (vmId: string) => void;
-  onOpenDesktop: (vmId: string) => void;
+  onVMAction: (vmId: number, action: 'start' | 'stop' | 'restart' | 'delete') => void;
+  onOpenConsole: (vmId: number) => void;
+  onOpenDesktop: (vmId: number) => void;
   onCreateVM: () => void;
-  onCreateSnapshot?: (vmId: string) => void;
-  onRestoreSnapshot?: (vmId: string, snapshotId: string) => void;
-  onRenameSnapshot?: (vmId: string, snapshotId: string, newName: string) => void;
-  onDeleteSnapshot?: (vmId: string, snapshotId: string) => void;
+  onCreateSnapshot?: (vmId: number) => void;
+  onRestoreSnapshot?: (vmId: number, snapshotId: number) => void;
+  onRenameSnapshot?: (vmId: number, snapshotId: number, newName: string) => void;
+  onDeleteSnapshot?: (vmId: number, snapshotId: number) => void;
 }
 
 const SnapshotManager: React.FC<{
-  vmId: string;
+  vmId: number;
   snapshots: VMSnapshot[];
   onCreateSnapshot: () => void;
-  onRestoreSnapshot: (snapshotId: string) => void;
-  onRenameSnapshot: (snapshotId: string, newName: string) => void;
-  onDeleteSnapshot: (snapshotId: string) => void;
+  onRestoreSnapshot: (snapshotId: number) => void;
+  onRenameSnapshot: (snapshotId: number, newName: string) => void;
+  onDeleteSnapshot: (snapshotId: number) => void;
 }> = ({ vmId, snapshots, onCreateSnapshot, onRestoreSnapshot, onRenameSnapshot, onDeleteSnapshot }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState('');
 
   const handleStartEdit = (snapshot: VMSnapshot) => {
@@ -60,7 +60,7 @@ const SnapshotManager: React.FC<{
     setEditName(snapshot.name);
   };
 
-  const handleSaveEdit = (snapshotId: string) => {
+  const handleSaveEdit = (snapshotId: number) => {
     if (editName.trim()) {
       onRenameSnapshot(snapshotId, editName.trim());
     }
@@ -221,8 +221,7 @@ export const UserVMs: React.FC<UserVMsProps> = ({
                     <span>{vm.hostname}</span>
                     <span>{vm.ipAddress}</span>
                     <span className={`${styles.statusBadge} ${styles[vm.status]}`}>
-                      {vm.status === 'running' ? 'Работает' : 
-                       vm.status === 'stopped' ? 'Остановлена' : 'Создается'}
+                      {vm.status === 'stopped' ? 'Остановлена' : 'Работает'}
                     </span>
                   </div>
                 </div>
@@ -294,7 +293,7 @@ export const UserVMs: React.FC<UserVMsProps> = ({
                         <Zap className={styles.metricIcon} style={{ color: getUsageColor(vm.ramUsage) }} />
                         Использование памяти
                       </span>
-                      <span className={styles.metricBarValue}>{vm.ramUsage}% ({Math.round(vm.config.ram * vm.ramUsage / 100)} / {vm.config.ram} GB)</span>
+                      <span className={styles.metricBarValue}>{vm.ramUsage}% ({Math.round(vm.config.ram * vm.ramUsage / 100)} / {vm.config.ram} МБ)</span>
                     </div>
                     <div className={styles.progressBarTrack}>
                       <div 

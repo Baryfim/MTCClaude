@@ -1,17 +1,14 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 import { VMMetrics, VMMetricsHistory } from '../../types';
-import axios from 'axios';
-
-const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-const enableBackend = import.meta.env.VITE_ENABLE_BACKEND === '1';
+import { apiRequestWithAuth, enableBackend } from '../api';
 
 // Асинхронные thunks для метрик
 export const fetchVMMetricsAsync = createAsyncThunk(
   'vmMetrics/fetchVMMetrics',
-  async (vmId: string) => {
+  async (vmId: number) => {
     if (enableBackend) {
-      const response = await axios.get<VMMetrics>(`${apiUrl}/v1/resources/${vmId}/metrics/`);
-      return { vmId, metrics: response.data };
+      const metrics = await apiRequestWithAuth<VMMetrics>('GET', `/v1/resources/${vmId}/metrics/`);
+      return { vmId, metrics };
     }
     return { vmId, metrics: {} as VMMetrics };
   }
@@ -19,21 +16,29 @@ export const fetchVMMetricsAsync = createAsyncThunk(
 
 export const fetchAllVMMetricsAsync = createAsyncThunk(
   'vmMetrics/fetchAllVMMetrics',
-  async (vmIds: string[]) => {
+  async (vmIds: number[]) => {
+    console.log('🔍 [vmMetricsSlice] Запрос метрик для VM IDs:', vmIds);
+    console.log('🔧 [vmMetricsSlice] Backend enabled:', enableBackend);
+    
     const promises = vmIds.map(async (vmId) => {
       try {
         if (enableBackend) {
-          const response = await axios.get<VMMetrics>(`${apiUrl}/v1/resources/${vmId}/metrics/`);
-          return { vmId, metrics: response.data };
+          console.log(`📡 [vmMetricsSlice] Отправка запроса метрик для VM ${vmId}`);
+          const metrics = await apiRequestWithAuth<VMMetrics>('GET', `/v1/resources/${vmId}/metrics/`);
+          console.log(`✅ [vmMetricsSlice] Получены метрики для VM ${vmId}:`, metrics);
+          return { vmId, metrics };
         }
+        console.log(`⚠️ [vmMetricsSlice] Backend отключен, возвращаем пустые метрики для VM ${vmId}`);
         return { vmId, metrics: {} as VMMetrics };
       } catch (error) {
-        console.error(`Failed to fetch metrics for VM ${vmId}:`, error);
+        console.error(`❌ [vmMetricsSlice] Ошибка получения метрик для VM ${vmId}:`, error);
         return null;
       }
     });
     const results = await Promise.all(promises);
-    return results.filter((result): result is { vmId: string; metrics: VMMetrics } => result !== null);
+    const filtered = results.filter((result): result is { vmId: number; metrics: VMMetrics } => result !== null);
+    console.log('📦 [vmMetricsSlice] Итоговые метрики:', filtered);
+    return filtered;
   }
 );
 
@@ -55,7 +60,7 @@ const vmMetricsSlice = createSlice({
   name: 'vmMetrics',
   initialState,
   reducers: {
-    updateVMMetrics: (state, action: PayloadAction<{ vmId: string; metrics: VMMetrics }>) => {
+    updateVMMetrics: (state, action: PayloadAction<{ vmId: number; metrics: VMMetrics }>) => {
       state.metrics[action.payload.vmId] = action.payload.metrics;
       
       // Добавить в историю метрик
@@ -80,7 +85,7 @@ const vmMetricsSlice = createSlice({
       state.history = [];
     },
 
-    removeVMMetrics: (state, action: PayloadAction<string>) => {
+    removeVMMetrics: (state, action: PayloadAction<number>) => {
       delete state.metrics[action.payload];
       state.history = state.history.filter(h => h.vmId !== action.payload);
     },
@@ -146,9 +151,9 @@ export const selectVMMetrics = (state: { vmMetrics: VMMetricsState }) => state.v
 export const selectMetricsHistory = (state: { vmMetrics: VMMetricsState }) => state.vmMetrics.history;
 export const selectMetricsLoading = (state: { vmMetrics: VMMetricsState }) => state.vmMetrics.loading;
 export const selectMetricsError = (state: { vmMetrics: VMMetricsState }) => state.vmMetrics.error;
-export const selectVMMetricsById = (vmId: string) => (state: { vmMetrics: VMMetricsState }) => 
+export const selectVMMetricsById = (vmId: number) => (state: { vmMetrics: VMMetricsState }) => 
   state.vmMetrics.metrics[vmId];
-export const selectVMMetricsHistoryById = (vmId: string) => (state: { vmMetrics: VMMetricsState }) => 
+export const selectVMMetricsHistoryById = (vmId: number) => (state: { vmMetrics: VMMetricsState }) => 
   state.vmMetrics.history.filter(h => h.vmId === vmId);
 
 export default vmMetricsSlice.reducer;

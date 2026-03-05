@@ -41,7 +41,7 @@ export const ResourceUsage: React.FC<ResourceUsageProps> = ({ usedResources, acc
             <Activity />
             <span>RAM</span>
           </div>
-          <div className={styles.resourceValue}>{usedResources.ram} / {accountLimits.ram} GB</div>
+          <div className={styles.resourceValue}>{usedResources.ram} / {accountLimits.ram} МБ</div>
           <div className={styles.progressBar}>
             <div 
               className={styles.progressFill}

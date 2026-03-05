@@ -7,7 +7,7 @@ import {
   Server,
   ChevronLeft
 } from 'lucide-react';
-import { VMInstance } from './types';
+import { VMInstance, UserVM } from './types';
 import { AdminConsole } from './blocks/AdminConsole/AdminConsole';
 import { AdminDesktop } from './blocks/AdminDesktop/AdminDesktop';
 import { Charts } from './blocks/Charts/Charts';
@@ -38,8 +38,8 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userName, setUserName] = useState('Guest');
   const [currentView, setCurrentView] = useState<'main' | 'dashboard'>('main');
-  const [showConsole, setShowConsole] = useState<{ vmId: string; vmName: string } | null>(null);
-  const [showDesktop, setShowDesktop] = useState<{ vmId: string; vmName: string } | null>(null);
+  const [showConsole, setShowConsole] = useState<{ vmId: number; vmName: string } | null>(null);
+  const [showDesktop, setShowDesktop] = useState<{ vmId: number; vmName: string } | null>(null);
   const [isConsoleFullscreen, setIsConsoleFullscreen] = useState(false);
   const [isDesktopFullscreen, setIsDesktopFullscreen] = useState(false);
   const [vmViewMode, setVmViewMode] = useState<'console' | 'desktop' | null>(null);
@@ -52,7 +52,7 @@ export default function App() {
 
   const accountLimits = {
     cpu: 8,
-    ram: 16,
+    ram: 16384, // МБ
     storage: 200,
     maxVMs: 3
   };
@@ -67,6 +67,7 @@ export default function App() {
   const handleLogin = (username: string) => {
     setUserName(username);
     setIsLoggedIn(true);
+    setCurrentView('main');
     setShowLoginModal(false);
   };
 
@@ -80,7 +81,7 @@ export default function App() {
     setUserName('Guest');
   };
 
-  const handleVMAction = (vmId: string, action: 'start' | 'stop' | 'restart' | 'delete') => {
+  const handleVMAction = (vmId: number, action: 'start' | 'stop' | 'restart' | 'delete') => {
     switch (action) {
       case 'delete':
         dispatch(deleteVMAsync(vmId));
@@ -97,9 +98,9 @@ export default function App() {
     }
   };
 
-  const handleOpenConsole = (vmId: string) => {
+  const handleOpenConsole = (vmId: number) => {
     const vm = deployedVMs.find(v => v.id === vmId);
-    if (vm?.status === 'running') {
+    if (vm) {
       setCurrentVmId(vmId);
       setShowConsole({ vmId, vmName: vm.name });
       setShowDesktop(null);
@@ -108,9 +109,9 @@ export default function App() {
     }
   };
 
-  const handleOpenDesktop = (vmId: string) => {
+  const handleOpenDesktop = (vmId: number) => {
     const vm = deployedVMs.find(v => v.id === vmId);
-    if (vm?.status === 'running') {
+    if (vm) {
       setCurrentVmId(vmId);
       setShowDesktop({ vmId, vmName: vm.name });
       setShowConsole(null);
@@ -128,27 +129,35 @@ export default function App() {
     setShowDesktop(mode === 'desktop' ? { vmId: vm.id, vmName: vm.name } : null);
   };
 
-  const handleCreateVM = (selectedInstance: VMInstance) => {
+  const handleCreateVM = (selectedInstance: VMInstance, vmFromServer?: UserVM) => {
+    const vmId = vmFromServer?.id || 0;
+    
     const newVM = {
-      id: `vm-${Date.now()}`,
-      name: `Server-${deployedVMs.length + 1}`,
+      id: vmId,
+      name: vmFromServer?.name || `Server-${deployedVMs.length + 1}`,
       hostname: `vm${deployedVMs.length + 1}.cloudscale.local`,
-      status: 'running' as const,
+      status: (vmFromServer?.status?.toLowerCase() as 'running' | 'stopped' | 'creating' | 'error') || 'creating',
       config: selectedInstance,
       ipAddress: `10.0.1.${10 + deployedVMs.length}`,
-      cpuUsage: Math.floor(Math.random() * 60) + 20,
-      ramUsage: Math.floor(Math.random() * 60) + 20,
-      diskUsage: Math.floor(Math.random() * 40) + 10,
+      cpuUsage: 0,
+      ramUsage: 0,
+      diskUsage: 0,
       uptime: '0h 0m',
       network: 'default-network',
       snapshots: []
     };
     
     dispatch(createVM(newVM));
+    
+    // Через 5 секунд меняем статус на 'running'
+    setTimeout(() => {
+      dispatch(updateVM({ ...newVM, status: 'running' }));
+    }, 5000);
+    
     setCurrentView('dashboard');
   };
 
-  const handleCreateSnapshot = (vmId: string) => {
+  const handleCreateSnapshot = (vmId: number) => {
     const vm = deployedVMs.find(v => v.id === vmId);
     if (!vm) return;
 
@@ -163,7 +172,7 @@ export default function App() {
     });
 
     const newSnapshot = {
-      id: `snapshot-${Date.now()}`,
+      id: Date.now(),
       name: `Снапшот ${snapshotCount}`,
       createdAt: dateStr,
       size: `${Math.floor(Math.random() * 15) + 5} ГБ`
@@ -178,7 +187,7 @@ export default function App() {
     dispatch(updateVM(updatedVM));
   };
 
-  const handleRestoreSnapshot = (vmId: string, snapshotId: string) => {
+  const handleRestoreSnapshot = (vmId: number, snapshotId: number) => {
     const vm = deployedVMs.find(v => v.id === vmId);
     const snapshot = vm?.snapshots?.find(s => s.id === snapshotId);
     
@@ -189,7 +198,7 @@ export default function App() {
     }
   };
 
-  const handleRenameSnapshot = (vmId: string, snapshotId: string, newName: string) => {
+  const handleRenameSnapshot = (vmId: number, snapshotId: number, newName: string) => {
     const vm = deployedVMs.find(v => v.id === vmId);
     if (!vm) return;
 
@@ -205,7 +214,7 @@ export default function App() {
     dispatch(updateVM(updatedVM));
   };
 
-  const handleDeleteSnapshot = (vmId: string, snapshotId: string) => {
+  const handleDeleteSnapshot = (vmId: number, snapshotId: number) => {
     const vm = deployedVMs.find(v => v.id === vmId);
     if (!vm) return;
 
@@ -231,10 +240,14 @@ export default function App() {
           
           {isLoggedIn ? (
             <div className={styles.userInfo}>
-              <div className={styles.userBadge}>
+              <button 
+                className={styles.userBadge}
+                onClick={() => setCurrentView('dashboard')}
+                title="Перейти в личный кабинет"
+              >
                 <User />
                 <span>{userName}</span>
-              </div>
+              </button>
               <button onClick={handleLogout} className={styles.logoutButton}>
                 <LogOut />
                 <span>Выйти</span>
@@ -275,7 +288,7 @@ export default function App() {
           </div>
 
           <ResourceUsage usedResources={usedResources} accountLimits={accountLimits} />
-          <Charts />
+          <Charts vmId={deployedVMs.find(vm => vm.status === 'running')?.id} />
           <UserVMs 
             vms={deployedVMs}
             onVMAction={handleVMAction}

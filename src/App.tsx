@@ -20,6 +20,7 @@ import styles from './App.module.scss';
 import { useAppDispatch, useAppSelector } from './lib/hooks';
 import { 
   createVM, 
+  updateVM,
   deleteVMAsync,
   startVMAsync,
   stopVMAsync,
@@ -139,11 +140,83 @@ export default function App() {
       ramUsage: Math.floor(Math.random() * 60) + 20,
       diskUsage: Math.floor(Math.random() * 40) + 10,
       uptime: '0h 0m',
-      network: 'default-network'
+      network: 'default-network',
+      snapshots: []
     };
     
     dispatch(createVM(newVM));
     setCurrentView('dashboard');
+  };
+
+  const handleCreateSnapshot = (vmId: string) => {
+    const vm = deployedVMs.find(v => v.id === vmId);
+    if (!vm) return;
+
+    const snapshotCount = (vm.snapshots?.length || 0) + 1;
+    const now = new Date();
+    const dateStr = now.toLocaleString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    const newSnapshot = {
+      id: `snapshot-${Date.now()}`,
+      name: `Снапшот ${snapshotCount}`,
+      createdAt: dateStr,
+      size: `${Math.floor(Math.random() * 15) + 5} ГБ`
+    };
+
+    // Update VM with new snapshot
+    const updatedVM = {
+      ...vm,
+      snapshots: [...(vm.snapshots || []), newSnapshot]
+    };
+
+    dispatch(updateVM(updatedVM));
+  };
+
+  const handleRestoreSnapshot = (vmId: string, snapshotId: string) => {
+    const vm = deployedVMs.find(v => v.id === vmId);
+    const snapshot = vm?.snapshots?.find(s => s.id === snapshotId);
+    
+    if (vm && snapshot) {
+      alert(`Восстановление ВМ "${vm.name}" из снапшота "${snapshot.name}"...\nВМ будет перезапущена.`);
+      // Here you would typically dispatch an action to restore from snapshot
+      dispatch(restartVM(vmId));
+    }
+  };
+
+  const handleRenameSnapshot = (vmId: string, snapshotId: string, newName: string) => {
+    const vm = deployedVMs.find(v => v.id === vmId);
+    if (!vm) return;
+
+    const updatedSnapshots = vm.snapshots?.map(snapshot =>
+      snapshot.id === snapshotId ? { ...snapshot, name: newName } : snapshot
+    );
+
+    const updatedVM = {
+      ...vm,
+      snapshots: updatedSnapshots
+    };
+
+    dispatch(updateVM(updatedVM));
+  };
+
+  const handleDeleteSnapshot = (vmId: string, snapshotId: string) => {
+    const vm = deployedVMs.find(v => v.id === vmId);
+    if (!vm) return;
+
+    const updatedSnapshots = vm.snapshots?.filter(snapshot => snapshot.id !== snapshotId);
+
+    const updatedVM = {
+      ...vm,
+      snapshots: updatedSnapshots
+    };
+
+    dispatch(updateVM(updatedVM));
   };
 
   return (
@@ -209,6 +282,10 @@ export default function App() {
             onOpenConsole={handleOpenConsole}
             onOpenDesktop={handleOpenDesktop}
             onCreateVM={() => setCurrentView('main')}
+            onCreateSnapshot={handleCreateSnapshot}
+            onRestoreSnapshot={handleRestoreSnapshot}
+            onRenameSnapshot={handleRenameSnapshot}
+            onDeleteSnapshot={handleDeleteSnapshot}
           />
           <UsageHistory activities={activities} />
         </main>

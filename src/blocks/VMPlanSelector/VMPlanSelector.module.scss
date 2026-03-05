@@ -1,68 +1,156 @@
 .container {
   max-width: 80rem;
   margin: 0 auto;
-  padding: 5rem 1rem 3rem;
+  padding: 1.5rem 1rem 1rem;
+  height: 100vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 
   @media (min-width: 640px) {
-    padding: 6rem 1.5rem 4rem;
+    padding: 2rem 1.5rem 1rem;
   }
 
   @media (min-width: 1024px) {
-    padding: 8rem 2rem 4rem;
+    padding: 2.5rem 2rem 1rem;
+  }
+}
+
+.progressBar {
+  max-width: 500px;
+  margin: 0 auto 1.5rem;
+}
+
+.progressSteps {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.progressStep {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  flex: 0 0 auto;
+
+  .stepNumber {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.1);
+    border: 2px solid rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1rem;
+    color: rgba(0, 0, 0, 0.4);
+    transition: all 0.3s;
+  }
+
+  .stepLabel {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgba(0, 0, 0, 0.4);
+    transition: all 0.3s;
+  }
+
+  &.active {
+    .stepNumber {
+      background: black;
+      border-color: black;
+      color: white;
+    }
+
+    .stepLabel {
+      color: black;
+    }
+  }
+
+  &.completed {
+    .stepNumber {
+      background: rgba(34, 197, 94, 0.2);
+      border-color: rgb(34, 197, 94);
+      color: rgb(34, 197, 94);
+    }
+
+    .stepLabel {
+      color: rgb(34, 197, 94);
+    }
+  }
+}
+
+.progressLine {
+  flex: 1;
+  height: 2px;
+  background: rgba(0, 0, 0, 0.1);
+  margin: 0 0.75rem;
+  position: relative;
+  margin-bottom: 1.5rem;
+
+  .progressLineFill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 0;
+    background: black;
+    transition: width 0.5s ease;
+
+    &.filled {
+      width: 100%;
+    }
   }
 }
 
 .header {
   text-align: center;
-  margin-bottom: 3rem;
-
-  @media (min-width: 640px) {
-    margin-bottom: 4rem;
-  }
+  margin-bottom: 1.5rem;
 
   h1 {
-    font-size: 2rem;
+    font-size: 1.5rem;
     font-weight: 700;
     letter-spacing: -0.025em;
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
     word-wrap: break-word;
     overflow-wrap: break-word;
 
     @media (min-width: 640px) {
-      font-size: 2.5rem;
+      font-size: 1.75rem;
     }
 
     @media (min-width: 1024px) {
-      font-size: 3rem;
+      font-size: 2rem;
     }
   }
 
   p {
     color: rgba(0, 0, 0, 0.4);
-    font-size: 1rem;
+    font-size: 0.875rem;
     word-wrap: break-word;
     overflow-wrap: break-word;
 
     @media (min-width: 640px) {
-      font-size: 1.125rem;
+      font-size: 0.9375rem;
     }
   }
 }
 
 .tierTabs {
   display: flex;
-  gap: 1rem;
+  gap: 0.75rem;
   justify-content: center;
-  margin-bottom: 3rem;
+  margin-bottom: 1.5rem;
   flex-wrap: wrap;
 }
 
 .tierTab {
-  padding: 0.875rem 2rem;
+  padding: 0.625rem 1.5rem;
   background: white;
   border: 2px solid rgba(0, 0, 0, 0.1);
   border-radius: 9999px;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s;
@@ -80,71 +168,94 @@
   }
 }
 
-.plansGrid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1.5rem;
-  margin-bottom: 3rem;
-
-  @media (min-width: 640px) {
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 2rem;
-  }
-
-  @media (min-width: 1024px) {
-    margin-bottom: 4rem;
-  }
+.plansList {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 0.5rem;
 }
 
-.planCard {
-  position: relative;
+.planItem {
   background: white;
   border: 2px solid rgba(0, 0, 0, 0.1);
-  border-radius: 1.5rem;
-  padding: 2rem;
+  border-radius: 0.875rem;
+  padding: 1rem;
   cursor: pointer;
   transition: all 0.3s;
 
   &:hover {
     border-color: rgba(0, 0, 0, 0.3);
-    transform: translateY(-4px);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    transform: translateX(4px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
   }
 
   &.selected {
     border-color: black;
     border-width: 2px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    background: rgba(0, 0, 0, 0.02);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
   }
 }
 
-.selectedBadge {
-  position: absolute;
-  top: 1.5rem;
-  right: 1.5rem;
+.planInfo {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  justify-content: space-between;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+}
+
+.planMainInfo {
+  flex: 1;
+
+  h3 {
+    font-size: 1.125rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+}
+
+.specs {
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.spec {
   display: flex;
   align-items: center;
   gap: 0.375rem;
-  padding: 0.5rem 1rem;
-  background: black;
-  color: white;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 0.8125rem;
+  color: rgba(0, 0, 0, 0.6);
 
   svg {
     width: 1rem;
     height: 1rem;
+    color: rgba(0, 0, 0, 0.4);
+  }
+
+  span {
+    font-weight: 600;
   }
 }
 
-.planHeader {
-  margin-bottom: 2rem;
+.planPricing {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.125rem;
 
-  h3 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    margin-bottom: 1rem;
+  @media (max-width: 768px) {
+    align-items: flex-start;
   }
 }
 
@@ -154,107 +265,202 @@
   gap: 0.25rem;
 
   .amount {
-    font-size: 2.5rem;
+    font-size: 1.75rem;
     font-weight: 700;
     letter-spacing: -0.025em;
   }
 
   .period {
-    font-size: 1rem;
+    font-size: 0.8125rem;
     color: rgba(0, 0, 0, 0.4);
   }
 }
 
-.specs {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-  margin-bottom: 2rem;
-  padding: 1.5rem 0;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+.monthlyCost {
+  font-size: 0.6875rem;
+  color: rgba(0, 0, 0, 0.4);
+  font-weight: 500;
 }
 
-.spec {
+.selectArrow {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  color: rgba(0, 0, 0, 0.3);
+  transition: all 0.3s;
 
   svg {
     width: 1.5rem;
     height: 1.5rem;
-    color: rgba(0, 0, 0, 0.4);
   }
 
-  div {
-    display: flex;
-    align-items: baseline;
-    gap: 0.5rem;
-  }
-
-  .value {
-    font-size: 1.125rem;
-    font-weight: 600;
-  }
-
-  .label {
-    color: rgba(0, 0, 0, 0.4);
-    font-size: 0.875rem;
+  @media (max-width: 768px) {
+    display: none;
   }
 }
 
-.estimatedCost {
+.planItem:hover .selectArrow {
+  color: black;
+  transform: translateX(4px);
+}
+
+// OS Selection Styles
+.selectedPlanSummary {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 0.875rem;
+  padding: 1rem;
+  margin-bottom: 1.25rem;
+  text-align: center;
+
+  h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+  }
+}
+
+.summarySpecs {
   display: flex;
   align-items: center;
+  gap: 0.625rem;
+  justify-content: center;
+  font-size: 0.8125rem;
+  color: rgba(0, 0, 0, 0.6);
+  flex-wrap: wrap;
+}
+
+.osList {
+  max-width: 900px;
+  margin: 0 auto 1.25rem;
+  display: flex;
+  flex-direction: column;
   gap: 0.75rem;
-  padding: 1rem 1.25rem;
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 1rem;
-  margin-bottom: 1.5rem;
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
 
-  svg {
-    width: 1.25rem;
-    height: 1.25rem;
-    color: rgba(0, 0, 0, 0.4);
-    flex-shrink: 0;
+.osItem {
+  background: white;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-radius: 0.875rem;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+
+  &:hover {
+    border-color: rgba(0, 0, 0, 0.3);
+    transform: translateX(4px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
   }
 
-  div {
-    display: flex;
-    flex-direction: column;
-    gap: 0.125rem;
-  }
-
-  .costLabel {
-    font-size: 0.75rem;
-    color: rgba(0, 0, 0, 0.4);
-  }
-
-  .costValue {
-    font-size: 0.875rem;
-    font-weight: 600;
+  &.selected {
+    border-color: black;
+    border-width: 2px;
+    background: rgba(0, 0, 0, 0.02);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
   }
 }
 
-.selectButton {
-  width: 100%;
-  padding: 1rem 2rem;
+.osIcon {
+  font-size: 2.25rem;
+  flex-shrink: 0;
+  width: 3rem;
+  height: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 0.625rem;
+}
+
+.osInfo {
+  flex: 1;
+
+  h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 0.125rem;
+  }
+
+  p {
+    font-size: 0.8125rem;
+    color: rgba(0, 0, 0, 0.5);
+  }
+}
+
+.checkIcon {
+  background: black;
+  color: white;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+
+.actionButtons {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  padding-top: 0.5rem;
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+  }
+}
+
+.backButton {
+  padding: 0.75rem 1.5rem;
+  background: white;
+  color: black;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  border-radius: 9999px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+
+  &:hover {
+    border-color: black;
+    background: rgba(0, 0, 0, 0.05);
+  }
+}
+
+.createButton {
+  padding: 0.75rem 1.5rem;
   background: black;
   color: white;
   border: none;
   border-radius: 9999px;
-  font-size: 1rem;
+  font-size: 0.9375rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 
-  &:hover {
+  &:hover:not(:disabled) {
     transform: scale(1.02);
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   }
 
-  &:active {
+  &:active:not(:disabled) {
     transform: scale(1);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 }

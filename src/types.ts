@@ -48,6 +48,13 @@ export const INSTANCE_TYPES: VMInstance[] = [
   { id: 'r5-2xlarge', name: 'Память Ультра', cpu: 8, ram: 64, storage: 320, pricePerHour: 0.50, tier: 'Оптимизировано для памяти' },
 ];
 
+export interface VMSnapshot {
+  id: string;
+  name: string;
+  createdAt: string;
+  size: string;
+}
+
 export interface DeployedVM {
   id: string;
   name: string;
@@ -60,6 +67,7 @@ export interface DeployedVM {
   diskUsage: number;
   uptime: string;
   network: string;
+  snapshots?: VMSnapshot[];
 }
 
 export interface Activity {

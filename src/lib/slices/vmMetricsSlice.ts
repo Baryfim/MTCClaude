@@ -3,13 +3,17 @@ import { VMMetrics, VMMetricsHistory } from '../../types';
 import axios from 'axios';
 
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const enableBackend = import.meta.env.VITE_ENABLE_BACKEND === '1';
 
 // Асинхронные thunks для метрик
 export const fetchVMMetricsAsync = createAsyncThunk(
   'vmMetrics/fetchVMMetrics',
   async (vmId: string) => {
-    const response = await axios.get<VMMetrics>(`${apiUrl}/v1/resources/${vmId}/metrics/`);
-    return { vmId, metrics: response.data };
+    if (enableBackend) {
+      const response = await axios.get<VMMetrics>(`${apiUrl}/v1/resources/${vmId}/metrics/`);
+      return { vmId, metrics: response.data };
+    }
+    return { vmId, metrics: {} as VMMetrics };
   }
 );
 
@@ -18,8 +22,11 @@ export const fetchAllVMMetricsAsync = createAsyncThunk(
   async (vmIds: string[]) => {
     const promises = vmIds.map(async (vmId) => {
       try {
-        const response = await axios.get<VMMetrics>(`${apiUrl}/v1/resources/${vmId}/metrics/`);
-        return { vmId, metrics: response.data };
+        if (enableBackend) {
+          const response = await axios.get<VMMetrics>(`${apiUrl}/v1/resources/${vmId}/metrics/`);
+          return { vmId, metrics: response.data };
+        }
+        return { vmId, metrics: {} as VMMetrics };
       } catch (error) {
         console.error(`Failed to fetch metrics for VM ${vmId}:`, error);
         return null;

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { User, Lock, AlertCircle, X } from 'lucide-react';
+import { User, Lock, AlertCircle, X, Building2 } from 'lucide-react';
 import styles from './UserLogin.module.scss';
 import axios from 'axios';
 
@@ -14,9 +14,11 @@ export const UserLogin: React.FC<UserLoginProps> = ({ onLogin, onClose, mode }) 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [companyName, setCompanyName] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const apiUrl = import.meta.env.VITE_API_URL;
+  const enableBackend = import.meta.env.VITE_ENABLE_BACKEND === '1';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,14 +34,21 @@ export const UserLogin: React.FC<UserLoginProps> = ({ onLogin, onClose, mode }) 
       return;
     }
 
+    if (mode === 'register' && !companyName.trim()) {
+      setError('Укажите название компании');
+      return;
+    }
+
     setIsLoading(true);
     await new Promise(resolve => setTimeout(resolve, 800));
 
-    await axios.post(`${apiUrl}/api/auth`, {
-      username,
-      password,
-      company_name: mode === 'register' ? 'Default Company' : undefined
-    });
+    if (enableBackend) {
+      await axios.post(`${apiUrl}/api/auth`, {
+        username,
+        password,
+        company_name: mode === 'register' ? companyName : undefined
+      });
+    }
 
     onLogin(username);
   };
@@ -85,6 +94,22 @@ export const UserLogin: React.FC<UserLoginProps> = ({ onLogin, onClose, mode }) 
               />
             </div>
           </div>
+
+          {mode === 'register' && (
+            <div className={styles.formGroup}>
+              <label>Название компании</label>
+              <div className={styles.inputWrapper}>
+                <Building2 />
+                <input
+                  type="text"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  placeholder="Введите название компании"
+                  required
+                />
+              </div>
+            </div>
+          )}
 
           <div className={styles.formGroup}>
             <label>Пароль</label>

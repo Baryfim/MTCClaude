@@ -3,6 +3,7 @@ import { DeployedVM, Activity } from '../../types';
 import axios from 'axios';
 
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const enableBackend = import.meta.env.VITE_ENABLE_BACKEND === '1';
 
 const addActivity = (state: UserVMsState, action: string, vmName: string) => {
   state.activities.unshift({
@@ -18,7 +19,9 @@ const addActivity = (state: UserVMsState, action: string, vmName: string) => {
 export const startVMAsync = createAsyncThunk(
   'userVMs/startVM',
   async (vmId: string) => {
-    await axios.post(`${apiUrl}/v1/resources/${vmId}/start/`);
+    if (enableBackend) {
+      await axios.post(`${apiUrl}/v1/resources/${vmId}/start/`);
+    }
     return vmId;
   }
 );
@@ -26,7 +29,9 @@ export const startVMAsync = createAsyncThunk(
 export const stopVMAsync = createAsyncThunk(
   'userVMs/stopVM',
   async (vmId: string) => {
-    await axios.post(`${apiUrl}/v1/resources/${vmId}/stop/`);
+    if (enableBackend) {
+      await axios.post(`${apiUrl}/v1/resources/${vmId}/stop/`);
+    }
     return vmId;
   }
 );
@@ -34,7 +39,9 @@ export const stopVMAsync = createAsyncThunk(
 export const deleteVMAsync = createAsyncThunk(
   'userVMs/deleteVM',
   async (vmId: string) => {
-    await axios.delete(`${apiUrl}/v1/resources/${vmId}`);
+    if (enableBackend) {
+      await axios.delete(`${apiUrl}/v1/resources/${vmId}`);
+    }
     return vmId;
   }
 );

@@ -3,25 +3,32 @@ import { AdminVM, VMResourceUpdate } from '../../types';
 import axios from 'axios';
 
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const enableBackend = import.meta.env.VITE_ENABLE_BACKEND === '1';
 
 // Асинхронные thunks для админа
 export const fetchAllUsersVMsAsync = createAsyncThunk(
   'admin/fetchAllUsersVMs',
   async () => {
-    const response = await axios.get<AdminVM[]>(`${apiUrl}/v1/admin/vms/`);
-    return response.data;
+    if (enableBackend) {
+      const response = await axios.get<AdminVM[]>(`${apiUrl}/v1/admin/vms/`);
+      return response.data;
+    }
+    return [];
   }
 );
 
 export const updateVMResourcesAsync = createAsyncThunk(
   'admin/updateVMResources',
   async (data: VMResourceUpdate) => {
-    const response = await axios.put(`${apiUrl}/v1/admin/vms/${data.id}/resources/`, {
-      cpu_cores: data.cpu_cores,
-      ram_mb: data.ram_mb,
-      storage: data.storage
-    });
-    return response.data;
+    if (enableBackend) {
+      const response = await axios.put(`${apiUrl}/v1/admin/vms/${data.id}/resources/`, {
+        cpu_cores: data.cpu_cores,
+        ram_mb: data.ram_mb,
+        storage: data.storage
+      });
+      return response.data;
+    }
+    return data as AdminVM;
   }
 );
 

@@ -1,6 +1,13 @@
-import React from 'react';
-import { Server, Play, Square, RotateCw, Trash2, Network, Clock, Terminal, Monitor } from 'lucide-react';
+import React, { useState } from 'react';
+import { Server, Play, Square, RotateCw, Trash2, Network, Clock, Terminal, Monitor, Cpu, HardDrive, Activity, Zap, Camera, Edit2, Check, X, RotateCcw } from 'lucide-react';
 import styles from './UserVMs.module.scss';
+
+export interface VMSnapshot {
+  id: string;
+  name: string;
+  createdAt: string;
+  size: string;
+}
 
 export interface DeployedVM {
   id: string;
@@ -21,6 +28,7 @@ export interface DeployedVM {
   diskUsage: number;
   uptime: string;
   network: string;
+  snapshots?: VMSnapshot[];
 }
 
 interface UserVMsProps {
@@ -29,14 +37,164 @@ interface UserVMsProps {
   onOpenConsole: (vmId: string) => void;
   onOpenDesktop: (vmId: string) => void;
   onCreateVM: () => void;
+  onCreateSnapshot?: (vmId: string) => void;
+  onRestoreSnapshot?: (vmId: string, snapshotId: string) => void;
+  onRenameSnapshot?: (vmId: string, snapshotId: string, newName: string) => void;
+  onDeleteSnapshot?: (vmId: string, snapshotId: string) => void;
 }
+
+const SnapshotManager: React.FC<{
+  vmId: string;
+  snapshots: VMSnapshot[];
+  onCreateSnapshot: () => void;
+  onRestoreSnapshot: (snapshotId: string) => void;
+  onRenameSnapshot: (snapshotId: string, newName: string) => void;
+  onDeleteSnapshot: (snapshotId: string) => void;
+}> = ({ vmId, snapshots, onCreateSnapshot, onRestoreSnapshot, onRenameSnapshot, onDeleteSnapshot }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+
+  const handleStartEdit = (snapshot: VMSnapshot) => {
+    setEditingId(snapshot.id);
+    setEditName(snapshot.name);
+  };
+
+  const handleSaveEdit = (snapshotId: string) => {
+    if (editName.trim()) {
+      onRenameSnapshot(snapshotId, editName.trim());
+    }
+    setEditingId(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditName('');
+  };
+
+  return (
+    <div className={styles.snapshotSection}>
+      <div className={styles.snapshotHeader}>
+        <button 
+          onClick={() => setIsExpanded(!isExpanded)}
+          className={styles.snapshotToggle}
+        >
+          <Camera />
+          <span>Снапшоты ({snapshots.length})</span>
+          <span className={`${styles.toggleArrow} ${isExpanded ? styles.expanded : ''}`}>▼</span>
+        </button>
+        <button 
+          onClick={onCreateSnapshot}
+          className={styles.createSnapshotButton}
+        >
+          <Camera />
+          Создать снапшот
+        </button>
+      </div>
+
+      {isExpanded && (
+        <div className={styles.snapshotList}>
+          {snapshots.length === 0 ? (
+            <div className={styles.emptySnapshots}>
+              <Camera />
+              <p>Нет созданных снапшотов</p>
+            </div>
+          ) : (
+            snapshots.map(snapshot => (
+              <div key={snapshot.id} className={styles.snapshotItem}>
+                <div className={styles.snapshotInfo}>
+                  {editingId === snapshot.id ? (
+                    <div className={styles.snapshotEditInput}>
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSaveEdit(snapshot.id)}
+                        autoFocus
+                      />
+                      <button 
+                        onClick={() => handleSaveEdit(snapshot.id)}
+                        className={styles.iconButton}
+                        title="Сохранить"
+                      >
+                        <Check />
+                      </button>
+                      <button 
+                        onClick={handleCancelEdit}
+                        className={styles.iconButton}
+                        title="Отмена"
+                      >
+                        <X />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className={styles.snapshotDetails}>
+                        <span className={styles.snapshotName}>{snapshot.name}</span>
+                        <div className={styles.snapshotMeta}>
+                          <span>{snapshot.createdAt}</span>
+                          <span>•</span>
+                          <span>{snapshot.size}</span>
+                        </div>
+                      </div>
+                      <div className={styles.snapshotActions}>
+                        <button
+                          onClick={() => handleStartEdit(snapshot)}
+                          className={styles.iconButton}
+                          title="Переименовать"
+                        >
+                          <Edit2 />
+                        </button>
+                        <button
+                          onClick={() => onRestoreSnapshot(snapshot.id)}
+                          className={`${styles.iconButton} ${styles.restore}`}
+                          title="Восстановить"
+                        >
+                          <RotateCcw />
+                        </button>
+                        <button
+                          onClick={() => onDeleteSnapshot(snapshot.id)}
+                          className={`${styles.iconButton} ${styles.deleteIcon}`}
+                          title="Удалить"
+                        >
+                          <Trash2 />
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const getUsageColor = (value: number): string => {
+  if (value <= 60) return '#22c55e'; // Зеленый - все хорошо
+  if (value <= 80) return '#eab308'; // Желтый - не очень
+  return '#ef4444'; // Красный - плохо
+};
+
+const getUsageGradient = (value: number): string => {
+  const color = getUsageColor(value);
+  if (value <= 60) return `linear-gradient(90deg, ${color}, #4ade80)`;
+  if (value <= 80) return `linear-gradient(90deg, ${color}, #facc15)`;
+  return `linear-gradient(90deg, ${color}, #f87171)`;
+};
 
 export const UserVMs: React.FC<UserVMsProps> = ({ 
   vms, 
   onVMAction,
   onOpenConsole,
   onOpenDesktop,
-  onCreateVM 
+  onCreateVM,
+  onCreateSnapshot,
+  onRestoreSnapshot,
+  onRenameSnapshot,
+  onDeleteSnapshot
 }) => {
   return (
     <section className={styles.container}>
@@ -102,24 +260,85 @@ export const UserVMs: React.FC<UserVMsProps> = ({
                 </div>
               </div>
 
-              <div className={styles.vmStats}>
-                <div className={styles.vmStat}>
-                  <div className={styles.label}>Конфигурация</div>
-                  <div className={styles.value}>{vm.config.cpu} Core • {vm.config.ram} GB RAM • {vm.config.storage} GB</div>
+              {/* Colorful Metrics Dashboard */}
+              <div className={styles.metricsSection}>
+                <div className={styles.metricsHeader}>
+                  <Activity />
+                  <span>Мониторинг производительности</span>
                 </div>
-                <div className={styles.vmStat}>
-                  <div className={styles.label}>CPU Usage</div>
-                  <div className={styles.value}>{vm.cpuUsage}%</div>
-                </div>
-                <div className={styles.vmStat}>
-                  <div className={styles.label}>RAM Usage</div>
-                  <div className={styles.value}>{vm.ramUsage}%</div>
-                </div>
-                <div className={styles.vmStat}>
-                  <div className={styles.label}>Disk Usage</div>
-                  <div className={styles.value}>{vm.diskUsage}%</div>
+
+                {/* Linear Progress Bars */}
+                <div className={styles.linearMetrics}>
+                  <div className={styles.metricBar}>
+                    <div className={styles.metricBarHeader}>
+                      <span className={styles.metricBarLabel}>
+                        <Cpu className={styles.metricIcon} style={{ color: getUsageColor(vm.cpuUsage) }} />
+                        Использование процессора
+                      </span>
+                      <span className={styles.metricBarValue}>{vm.cpuUsage}%</span>
+                    </div>
+                    <div className={styles.progressBarTrack}>
+                      <div 
+                        className={styles.progressBarFill}
+                        style={{ 
+                          width: `${vm.cpuUsage}%`,
+                          background: getUsageGradient(vm.cpuUsage)
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className={styles.metricBar}>
+                    <div className={styles.metricBarHeader}>
+                      <span className={styles.metricBarLabel}>
+                        <Zap className={styles.metricIcon} style={{ color: getUsageColor(vm.ramUsage) }} />
+                        Использование памяти
+                      </span>
+                      <span className={styles.metricBarValue}>{vm.ramUsage}% ({Math.round(vm.config.ram * vm.ramUsage / 100)} / {vm.config.ram} GB)</span>
+                    </div>
+                    <div className={styles.progressBarTrack}>
+                      <div 
+                        className={styles.progressBarFill}
+                        style={{ 
+                          width: `${vm.ramUsage}%`,
+                          background: getUsageGradient(vm.ramUsage)
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className={styles.metricBar}>
+                    <div className={styles.metricBarHeader}>
+                      <span className={styles.metricBarLabel}>
+                        <HardDrive className={styles.metricIcon} style={{ color: getUsageColor(vm.diskUsage) }} />
+                        Использование диска
+                      </span>
+                      <span className={styles.metricBarValue}>{vm.diskUsage}% ({Math.round(vm.config.storage * vm.diskUsage / 100)} / {vm.config.storage} GB)</span>
+                    </div>
+                    <div className={styles.progressBarTrack}>
+                      <div 
+                        className={styles.progressBarFill}
+                        style={{ 
+                          width: `${vm.diskUsage}%`,
+                          background: getUsageGradient(vm.diskUsage)
+                        }}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
+
+              {/* Snapshot Manager */}
+              {onCreateSnapshot && onRestoreSnapshot && onRenameSnapshot && onDeleteSnapshot && (
+                <SnapshotManager
+                  vmId={vm.id}
+                  snapshots={vm.snapshots || []}
+                  onCreateSnapshot={() => onCreateSnapshot(vm.id)}
+                  onRestoreSnapshot={(snapshotId) => onRestoreSnapshot(vm.id, snapshotId)}
+                  onRenameSnapshot={(snapshotId, newName) => onRenameSnapshot(vm.id, snapshotId, newName)}
+                  onDeleteSnapshot={(snapshotId) => onDeleteSnapshot(vm.id, snapshotId)}
+                />
+              )}
 
               <div className={styles.vmDetails}>
                 <div className={styles.detail}>

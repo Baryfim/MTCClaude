@@ -41,6 +41,7 @@ interface UserVMsProps {
   onRestoreSnapshot?: (vmId: number, snapshotId: number) => void;
   onRenameSnapshot?: (vmId: number, snapshotId: number, newName: string) => void;
   onDeleteSnapshot?: (vmId: number, snapshotId: number) => void;
+  isDemoMode?: boolean;
 }
 
 const SnapshotManager: React.FC<{
@@ -194,7 +195,8 @@ export const UserVMs: React.FC<UserVMsProps> = ({
   onCreateSnapshot,
   onRestoreSnapshot,
   onRenameSnapshot,
-  onDeleteSnapshot
+  onDeleteSnapshot,
+  isDemoMode = false
 }) => {
   return (
     <section className={styles.container}>
@@ -354,16 +356,18 @@ export const UserVMs: React.FC<UserVMsProps> = ({
               <div className={styles.vmActions}>
                 <button
                   onClick={() => onOpenConsole(vm.id)}
-                  disabled={vm.status !== 'running'}
+                  disabled={vm.status !== 'running' || isDemoMode}
                   className={styles.primaryButton}
+                  title={isDemoMode ? "Недоступно в демо-режиме" : ""}
                 >
                   <Terminal />
                   Открыть консоль
                 </button>
                 <button
                   onClick={() => onOpenDesktop(vm.id)}
-                  disabled={vm.status !== 'running'}
+                  disabled={vm.status !== 'running' || isDemoMode}
                   className={styles.secondaryButton}
+                  title={isDemoMode ? "Недоступно в демо-режиме" : ""}
                 >
                   <Monitor />
                   Открыть рабочий стол

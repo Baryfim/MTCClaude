@@ -1,6 +1,7 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 import { DeployedVM, Activity, UserVM, VMInstance, INSTANCE_TYPES } from '../../types';
 import { apiRequestWithAuth, enableBackend } from '../api';
+import { generateMockVMs, generateMockActivities, isMobile } from '../mockData';
 
 const addActivity = (state: UserVMsState, action: string, vmName: string) => {
   state.activities.unshift({
@@ -56,7 +57,13 @@ const mapUserVMToDeployedVM = (vm: UserVM): DeployedVM => {
 export const fetchUserVMs = createAsyncThunk(
   'userVMs/fetchUserVMs',
   async () => {
-    if (!enableBackend) return [];
+    if (!enableBackend) {
+      // Фейковые данные для демо-режима на мобильных
+      if (isMobile()) {
+        return generateMockVMs(3);
+      }
+      return [];
+    }
     const vms = await apiRequestWithAuth<UserVM[]>('GET', '/v1/resources/');
     return vms.map(mapUserVMToDeployedVM);
   }
@@ -201,6 +208,18 @@ const userVMsSlice = createSlice({
         const vms = action.payload;
         state.activeVMs = vms.filter(vm => vm.status === 'running' || vm.status === 'creating');
         state.inactiveVMs = vms.filter(vm => vm.status === 'stopped' || vm.status === 'error');
+        
+        // Добавляем фейковые активности в демо-режиме
+        if (!enableBackend && isMobile() && state.activities.length === 0) {
+          const mockActivities = generateMockActivities(8);
+          state.activities = mockActivities.map((activity, index) => ({
+            id: Date.now() + index,
+            action: activity.action,
+            vmName: vms[index % vms.length]?.name || 'Server-1',
+            timestamp: activity.timestamp,
+            status: 'success' as const
+          }));
+        }
       })
       .addCase(fetchUserVMs.rejected, (state, action) => {
         state.loading = false;

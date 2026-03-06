@@ -27,6 +27,9 @@ import {
   selectAdminError
 } from '../../lib/slices/adminSlice';
 import { AdminVM, VMResourceUpdate } from '../../types';
+import { generateMockChartData, updateMockMetrics, generateMockPieChartData, isMobile, MetricPoint } from '../../lib/mockData';
+import { enableBackend } from '../../lib/api';
+import { DemoBanner } from '../DemoBanner/DemoBanner';
 import styles from './AdminPanel.module.scss';
 
 interface UserSession {
@@ -62,6 +65,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
   const vmMetrics = useAppSelector(selectAdminVMMetrics);
   const loading = useAppSelector(selectAdminLoading);
   const error = useAppSelector(selectAdminError);
+  
+  // Состояние для фейковых данных в демо-режиме
+  const isDemoMode = !enableBackend && isMobile();
+  const [mockChartData, setMockChartData] = useState<MetricPoint[]>(() => generateMockChartData(20));
+  const [mockPieData, setMockPieData] = useState(() => generateMockPieChartData());
   
   const [editModal, setEditModal] = useState<EditModalState>({
     isOpen: false,
@@ -109,6 +117,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
   useEffect(() => {
     dispatch(fetchAllUsersVMsAsync());
   }, [dispatch]);
+  
+  // Обновление фейковых данных в демо-режиме
+  useEffect(() => {
+    if (isDemoMode) {
+      const interval = setInterval(() => {
+        setMockChartData(prev => updateMockMetrics(prev));
+        setMockPieData(generateMockPieChartData());
+      }, 3000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [isDemoMode]);
 
   // Загрузить метрики для активных VM
   useEffect(() => {
@@ -247,7 +267,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
   ];
 
   return (
-    <div className={styles.container}>
+    <div className={`${styles.container} ${isDemoMode ? styles.withDemoBanner : ''}`}>
       <div className={styles.header}>
         <div className={styles.headerContent}>
           <div className={styles.headerInner}>
@@ -643,6 +663,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
           </motion.div>
         </div>
       )}
+      
+      {/* Demo Banner */}
+      {isDemoMode && <DemoBanner />}
     </div>
   );
 };

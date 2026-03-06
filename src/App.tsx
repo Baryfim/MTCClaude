@@ -17,6 +17,7 @@ import { UserLogin } from './blocks/UserLogin/UserLogin';
 import { VMPlanSelector } from './blocks/VMPlanSelector/VMPlanSelector';
 import { UsageHistory } from './blocks/UsageHistory/UsageHistory';
 import { ResourceWarning } from './blocks/ResourceWarning/ResourceWarning';
+import { DemoBanner } from './blocks/DemoBanner/DemoBanner';
 import styles from './App.module.scss';
 import { useAppDispatch, useAppSelector } from './lib/hooks';
 import { 
@@ -31,7 +32,8 @@ import {
   fetchUserVMs
 } from './lib/slices/userVMsSlice';
 import { selectVMMetrics } from './lib/slices/vmMetricsSlice';
-import { apiRequestWithAuth } from './lib/api';
+import { apiRequestWithAuth, enableBackend } from './lib/api';
+import { isMobile } from './lib/mockData';
 
 export default function App() {
   const dispatch = useAppDispatch();
@@ -75,6 +77,9 @@ export default function App() {
   const [currentVmId, setCurrentVmId] = useState<string | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginMode, setLoginMode] = useState<'login' | 'register'>('login');
+  
+  // Определяем демо-режим (без подключения к БД и на мобильных)
+  const isDemoMode = !enableBackend && isMobile();
   
   // Resource warning state
   const [showResourceWarning, setShowResourceWarning] = useState(false);
@@ -358,7 +363,10 @@ export default function App() {
   };
 
   return (
-    <div className={styles.app}>
+    <div className={`${styles.app} ${isDemoMode ? styles.withDemoBanner : ''}`}>
+      {/* Demo Banner */}
+      {isDemoMode && <DemoBanner />}
+      
       {/* Top Auth Bar */}
       <div className={styles.topBar}>
         <div className={styles.authButtons}>
@@ -428,6 +436,7 @@ export default function App() {
             onRestoreSnapshot={handleRestoreSnapshot}
             onRenameSnapshot={handleRenameSnapshot}
             onDeleteSnapshot={handleDeleteSnapshot}
+            isDemoMode={isDemoMode}
           />
           <UsageHistory activities={activities} />
         </main>

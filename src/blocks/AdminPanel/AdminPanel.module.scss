@@ -1,6 +1,14 @@
 .container {
   min-height: 100vh;
   background: #000000;
+
+  &.withDemoBanner {
+    padding-bottom: 4rem;
+
+    @media (min-width: 640px) {
+      padding-bottom: 4.5rem;
+    }
+  }
 }
 
 .header {

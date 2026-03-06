@@ -7,6 +7,11 @@
   display: flex;
   flex-direction: column;
 
+  @media (max-width: 768px) {
+    padding-top: 5.5rem;
+    padding-right: 0.5rem;
+  }
+
   @media (min-width: 640px) {
     padding: 2rem 1.5rem 1rem;
   }
@@ -21,6 +26,12 @@
   justify-content: flex-start;
   margin-bottom: 2rem;
   padding-left: 0.5rem;
+  padding-right: 200px;
+
+  @media (max-width: 768px) {
+    padding-right: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
 }
 
 .logo {
@@ -178,6 +189,10 @@
   justify-content: center;
   margin-bottom: 1.5rem;
   flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 }
 
 .tierTab {

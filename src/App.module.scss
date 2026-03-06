@@ -6,6 +6,14 @@
     background: black;
     color: white;
   }
+
+  &.withDemoBanner {
+    padding-bottom: 4rem;
+
+    @media (min-width: 640px) {
+      padding-bottom: 4.5rem;
+    }
+  }
 }
 
 .topBar {

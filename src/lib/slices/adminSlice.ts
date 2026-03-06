@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { AdminVM, VMResourceUpdate, VMMetrics } from '../../types';
 import { apiRequestWithAuth, enableBackend } from '../api';
+import { generateMockAdminVMs, isMobile } from '../mockData';
 
 // Асинхронные thunks для админа
 export const fetchAllUsersVMsAsync = createAsyncThunk(
@@ -8,6 +9,10 @@ export const fetchAllUsersVMsAsync = createAsyncThunk(
   async () => {
     if (enableBackend) {
       return await apiRequestWithAuth<AdminVM[]>('GET', '/v1/resources/');
+    }
+    // Фейковые данные для демо-режима на мобильных
+    if (isMobile()) {
+      return generateMockAdminVMs(5);
     }
     return [];
   }
@@ -38,6 +43,21 @@ export const fetchActiveVMMetricsAsync = createAsyncThunk(
       });
       const results = await Promise.all(promises);
       return results.filter((r): r is { vmId: number; metrics: VMMetrics } => r !== null);
+    }
+    // Фейковые метрики для демо-режима на мобильных
+    if (isMobile() && vmIds.length > 0) {
+      return vmIds.map(vmId => ({
+        vmId,
+        metrics: {
+          cpu_percent: Math.random() * 100,
+          memory_used_mb: Math.random() * 4096,
+          memory_limit_mb: 4096,
+          disk_used_mb: Math.random() * 40,
+          disk_limit_bytes: 40 * 1024 * 1024 * 1024,
+          network_rx_bytes: Math.random() * 1000000,
+          network_tx_bytes: Math.random() * 1000000
+        } as VMMetrics
+      }));
     }
     return [];
   }

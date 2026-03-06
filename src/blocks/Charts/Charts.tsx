@@ -1,10 +1,12 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Cpu, Activity } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '../../lib/hooks';
 import { selectMetricsHistory, fetchVMMetricsAsync } from '../../lib/slices/vmMetricsSlice';
 import { selectActiveVMs } from '../../lib/slices/userVMsSlice';
 import { VMMetricsTimeSeries } from '../../types';
+import { generateMockChartData, updateMockMetrics, isMobile, MetricPoint } from '../../lib/mockData';
+import { enableBackend } from '../../lib/api';
 import styles from './Charts.module.scss';
 
 interface ChartsProps {
@@ -15,9 +17,24 @@ export const Charts: React.FC<ChartsProps> = ({ vmId }) => {
   const dispatch = useAppDispatch();
   const metricsHistory = useAppSelector(selectMetricsHistory);
   const activeVMs = useAppSelector(selectActiveVMs);
+  
+  // Состояние для фейковых данных в демо-режиме
+  const isDemoMode = !enableBackend && isMobile();
+  const [mockCpuData, setMockCpuData] = useState<MetricPoint[]>(() => generateMockChartData(20));
+  const [mockRamData, setMockRamData] = useState<MetricPoint[]>(() => generateMockChartData(20));
 
   // Автоматически обновлять метрики первой VM каждые 10 секунд
   useEffect(() => {
+    if (isDemoMode) {
+      // В демо-режиме обновляем фейковые данные каждые 3 секунды
+      const interval = setInterval(() => {
+        setMockCpuData(prev => updateMockMetrics(prev));
+        setMockRamData(prev => updateMockMetrics(prev));
+      }, 3000);
+      
+      return () => clearInterval(interval);
+    }
+    
     const firstVM = activeVMs[0];
     if (!firstVM) return;
 
@@ -37,10 +54,21 @@ export const Charts: React.FC<ChartsProps> = ({ vmId }) => {
       console.log('🛑 [Charts] Очистка интервала обновления');
       clearInterval(interval);
     };
-  }, [activeVMs, dispatch]);
+  }, [activeVMs, dispatch, isDemoMode]);
 
   // Преобразовать историю метрик в формат для графиков
   const chartData = useMemo<VMMetricsTimeSeries[]>(() => {
+    // В демо-режиме используем фейковые данные
+    if (isDemoMode) {
+      return mockCpuData.map((cpuPoint, index) => ({
+        time: cpuPoint.timestamp,
+        cpu: cpuPoint.value,
+        ram: mockRamData[index]?.value || 0,
+        disk: Math.random() * 50 + 20, // Использование диска меняется медленнее
+        network: 0,
+      }));
+    }
+    
     console.log('📊 [График] Пересчет данных, vmId:', vmId);
     console.log('📊 [График] История метрик:', metricsHistory);
     
@@ -92,7 +120,7 @@ export const Charts: React.FC<ChartsProps> = ({ vmId }) => {
 
     console.log('📊 [График] Итоговые данные:', sortedData);
     return sortedData;
-  }, [metricsHistory, vmId]);
+  }, [metricsHistory, vmId, isDemoMode, mockCpuData, mockRamData]);
 
   // Показать информацию о том, что отображается
   const displayTitle = useMemo(() => {

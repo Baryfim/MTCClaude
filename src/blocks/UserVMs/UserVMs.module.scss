@@ -162,6 +162,11 @@
 .actionButtons {
   display: flex;
   gap: 0.5rem;
+  flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    gap: 0.75rem;
+  }
 }
 
 .actionButton {
@@ -172,9 +177,19 @@
   cursor: pointer;
   transition: all 0.3s;
 
+  @media (max-width: 768px) {
+    padding: 1rem;
+    border-radius: 1rem;
+  }
+
   svg {
     width: 1rem;
     height: 1rem;
+
+    @media (max-width: 768px) {
+      width: 1.25rem;
+      height: 1.25rem;
+    }
   }
 
   &:hover {
@@ -202,6 +217,7 @@
     }
   }
 }
+  
 
 .vmStats {
   display: grid;
@@ -603,6 +619,11 @@
   border-top: 1px solid rgba(0, 0, 0, 0.05);
   flex-wrap: wrap;
 
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
   @media (min-width: 480px) {
     flex-wrap: nowrap;
   }
@@ -625,6 +646,13 @@
   cursor: pointer;
   transition: all 0.3s;
 
+  @media (max-width: 768px) {
+    width: 100%;
+    padding: 1rem 1.5rem;
+    font-size: 0.9375rem;
+    min-width: unset;
+  }
+
   @media (min-width: 640px) {
     font-size: 0.875rem;
     padding: 0.75rem 1.5rem;
@@ -633,6 +661,11 @@
   svg {
     width: 1rem;
     height: 1rem;
+
+    @media (max-width: 768px) {
+      width: 1.125rem;
+      height: 1.125rem;
+    }
   }
 
   &:hover:not(:disabled) {
@@ -667,6 +700,13 @@
   cursor: pointer;
   transition: all 0.3s;
 
+  @media (max-width: 768px) {
+    width: 100%;
+    padding: 1rem 1.5rem;
+    font-size: 0.9375rem;
+    min-width: unset;
+  }
+
   @media (min-width: 640px) {
     font-size: 0.875rem;
     padding: 0.75rem 1.5rem;
@@ -675,6 +715,11 @@
   svg {
     width: 1rem;
     height: 1rem;
+
+    @media (max-width: 768px) {
+      width: 1.125rem;
+      height: 1.125rem;
+    }
   }
 
   &:hover:not(:disabled) {

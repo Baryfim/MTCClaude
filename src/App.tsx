@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ShieldCheck, 
@@ -28,12 +28,37 @@ import {
   selectAllVMs,
   selectActivities
 } from './lib/slices/userVMsSlice';
-import { useVMMetricsPolling } from './lib/hooks/useVMMetricsPolling';
+import { selectVMMetrics } from './lib/slices/vmMetricsSlice';
+import { apiRequestWithAuth } from './lib/api';
 
 export default function App() {
   const dispatch = useAppDispatch();
-  const deployedVMs = useAppSelector(selectAllVMs);
+  const vmsFromRedux = useAppSelector(selectAllVMs);
+  const vmMetrics = useAppSelector(selectVMMetrics);
   const activities = useAppSelector(selectActivities);
+  
+  // Обогащаем VM данными метрик из VMMetrics
+  const deployedVMs = useMemo(() => {
+    return vmsFromRedux.map(vm => {
+      const metrics = vmMetrics[vm.id];
+      
+      // Если метрики есть, обновляем cpuUsage, ramUsage, diskUsage
+      if (metrics) {
+        return {
+          ...vm,
+          cpuUsage: metrics.cpu_percent ?? vm.cpuUsage,
+          ramUsage: metrics.memory_limit_mb && metrics.memory_limit_mb > 0
+            ? ((metrics.memory_used_mb ?? 0) / metrics.memory_limit_mb) * 100 
+            : vm.ramUsage,
+          diskUsage: metrics.disk_limit_bytes && metrics.disk_limit_bytes > 0
+            ? (((metrics.disk_used_mb ?? 0) * 1024 * 1024) / metrics.disk_limit_bytes) * 100 
+            : vm.diskUsage
+        };
+      }
+      
+      return vm;
+    });
+  }, [vmsFromRedux, vmMetrics]);
   
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userName, setUserName] = useState('Guest');
@@ -42,13 +67,12 @@ export default function App() {
   const [showDesktop, setShowDesktop] = useState<{ vmId: number; vmName: string } | null>(null);
   const [isConsoleFullscreen, setIsConsoleFullscreen] = useState(false);
   const [isDesktopFullscreen, setIsDesktopFullscreen] = useState(false);
+  const [isConsoleMinimized, setIsConsoleMinimized] = useState(false);
+  const [isDesktopMinimized, setIsDesktopMinimized] = useState(false);
   const [vmViewMode, setVmViewMode] = useState<'console' | 'desktop' | null>(null);
   const [currentVmId, setCurrentVmId] = useState<string | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginMode, setLoginMode] = useState<'login' | 'register'>('login');
-
-  // Включить опрос метрик когда пользователь залогинен и на странице дашборда
-  useVMMetricsPolling(isLoggedIn && currentView === 'dashboard', 10000);
 
   const accountLimits = {
     cpu: 8,
@@ -106,6 +130,7 @@ export default function App() {
       setShowDesktop(null);
       setVmViewMode('console');
       setIsConsoleFullscreen(false);
+      setIsConsoleMinimized(false);
     }
   };
 
@@ -117,6 +142,7 @@ export default function App() {
       setShowConsole(null);
       setVmViewMode('desktop');
       setIsDesktopFullscreen(false);
+      setIsDesktopMinimized(false);
     }
   };
 
@@ -130,13 +156,11 @@ export default function App() {
   };
 
   const handleCreateVM = (selectedInstance: VMInstance, vmFromServer?: UserVM) => {
-    const vmId = vmFromServer?.id || 0;
-    
-    const newVM = {
-      id: vmId,
+    const newVM: DeployedVM = {
+      id: vmFromServer?.id || Date.now(),
       name: vmFromServer?.name || `Server-${deployedVMs.length + 1}`,
       hostname: `vm${deployedVMs.length + 1}.cloudscale.local`,
-      status: (vmFromServer?.status?.toLowerCase() as 'running' | 'stopped' | 'creating' | 'error') || 'creating',
+      status: 'stopped',
       config: selectedInstance,
       ipAddress: `10.0.1.${10 + deployedVMs.length}`,
       cpuUsage: 0,
@@ -148,43 +172,42 @@ export default function App() {
     };
     
     dispatch(createVM(newVM));
-    
-    // Через 5 секунд меняем статус на 'running'
-    setTimeout(() => {
-      dispatch(updateVM({ ...newVM, status: 'running' }));
-    }, 5000);
-    
     setCurrentView('dashboard');
   };
 
-  const handleCreateSnapshot = (vmId: number) => {
+  const handleCreateSnapshot = async (vmId: number) => {
     const vm = deployedVMs.find(v => v.id === vmId);
     if (!vm) return;
 
-    const snapshotCount = (vm.snapshots?.length || 0) + 1;
-    const now = new Date();
-    const dateStr = now.toLocaleString('ru-RU', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    try {
+      await apiRequestWithAuth('POST', '/v1/snapshots/', { resource_id: vmId });
+      
+      const snapshotCount = (vm.snapshots?.length || 0) + 1;
+      const now = new Date();
+      const dateStr = now.toLocaleString('ru-RU', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
 
-    const newSnapshot = {
-      id: Date.now(),
-      name: `Снапшот ${snapshotCount}`,
-      createdAt: dateStr,
-      size: `${Math.floor(Math.random() * 15) + 5} ГБ`
-    };
+      const newSnapshot = {
+        id: Date.now(),
+        name: `Снапшот ${snapshotCount}`,
+        createdAt: dateStr,
+        size: `${Math.floor(Math.random() * 15) + 5} ГБ`
+      };
 
-    // Update VM with new snapshot
-    const updatedVM = {
-      ...vm,
-      snapshots: [...(vm.snapshots || []), newSnapshot]
-    };
+      const updatedVM = {
+        ...vm,
+        snapshots: [...(vm.snapshots || []), newSnapshot]
+      };
 
-    dispatch(updateVM(updatedVM));
+      dispatch(updateVM(updatedVM));
+    } catch (error) {
+      console.error('Ошибка создания снапшота:', error);
+    }
   };
 
   const handleRestoreSnapshot = (vmId: number, snapshotId: number) => {
@@ -214,18 +237,35 @@ export default function App() {
     dispatch(updateVM(updatedVM));
   };
 
-  const handleDeleteSnapshot = (vmId: number, snapshotId: number) => {
+  const handleDeleteSnapshot = async (vmId: number, snapshotId: number) => {
     const vm = deployedVMs.find(v => v.id === vmId);
-    if (!vm) return;
+    if (!vm) {
+      console.error('VM не найдена:', vmId);
+      return;
+    }
 
-    const updatedSnapshots = vm.snapshots?.filter(snapshot => snapshot.id !== snapshotId);
+    console.log('Удаление снапшота:', { vmId, snapshotId, currentSnapshots: vm.snapshots });
 
-    const updatedVM = {
-      ...vm,
-      snapshots: updatedSnapshots
-    };
+    try {
+      await apiRequestWithAuth('DELETE', `/v1/snapshots/${snapshotId}/`);
+      console.log('Снапшот удален на сервере:', snapshotId);
+      
+      const updatedSnapshots = vm.snapshots?.filter(snapshot => snapshot.id !== snapshotId) || [];
+      console.log('Обновленный список снапшотов:', updatedSnapshots);
 
-    dispatch(updateVM(updatedVM));
+      const updatedVM = {
+        ...vm,
+        snapshots: updatedSnapshots
+      };
+
+      console.log('Обновление VM в store:', updatedVM);
+      dispatch(updateVM(updatedVM));
+      console.log('VM обновлена в store');
+      
+    } catch (error) {
+      console.error('Ошибка удаления снапшота:', error);
+      alert('Ошибка при удалении снапшота: ' + (error as any).message);
+    }
   };
 
   return (
@@ -310,7 +350,7 @@ export default function App() {
 
       {/* Console Modal */}
       <AnimatePresence>
-        {showConsole && (
+        {showConsole && !isConsoleMinimized && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -331,12 +371,15 @@ export default function App() {
                 onToggleFullscreen={setIsConsoleFullscreen}
                 onSwitchToDesktop={() => switchViewMode('desktop')}
                 canSwitchToDesktop={!!currentVmId}
+                isMinimized={isConsoleMinimized}
+                onToggleMinimize={() => setIsConsoleMinimized(!isConsoleMinimized)}
                 onClose={() => {
                   setShowConsole(null);
                   setShowDesktop(null);
                   setCurrentVmId(null);
                   setVmViewMode(null);
                   setIsConsoleFullscreen(false);
+                  setIsConsoleMinimized(false);
                 }}
               />
             </motion.div>
@@ -344,9 +387,39 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      {/* Console Minimized Tab */}
+      <AnimatePresence>
+        {showConsole && isConsoleMinimized && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+          >
+            <AdminConsole 
+              vmId={showConsole.vmId} 
+              vmName={showConsole.vmName}
+              onToggleFullscreen={setIsConsoleFullscreen}
+              onSwitchToDesktop={() => switchViewMode('desktop')}
+              canSwitchToDesktop={!!currentVmId}
+              isMinimized={isConsoleMinimized}
+              onToggleMinimize={() => setIsConsoleMinimized(!isConsoleMinimized)}
+              onClose={() => {
+                setShowConsole(null);
+                setShowDesktop(null);
+                setCurrentVmId(null);
+                setVmViewMode(null);
+                setIsConsoleFullscreen(false);
+                setIsConsoleMinimized(false);
+              }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Desktop Modal */}
       <AnimatePresence>
-        {showDesktop && (
+        {showDesktop && !isDesktopMinimized && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -367,15 +440,48 @@ export default function App() {
                 onToggleFullscreen={setIsDesktopFullscreen}
                 onSwitchToConsole={() => switchViewMode('console')}
                 canSwitchToConsole={!!currentVmId}
+                isMinimized={isDesktopMinimized}
+                onToggleMinimize={() => setIsDesktopMinimized(!isDesktopMinimized)}
                 onClose={() => {
                   setShowDesktop(null);
                   setShowConsole(null);
                   setCurrentVmId(null);
                   setVmViewMode(null);
                   setIsDesktopFullscreen(false);
+                  setIsDesktopMinimized(false);
                 }}
               />
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Desktop Minimized Tab */}
+      <AnimatePresence>
+        {showDesktop && isDesktopMinimized && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+          >
+            <AdminDesktop 
+              vmId={showDesktop.vmId} 
+              vmName={showDesktop.vmName}
+              onToggleFullscreen={setIsDesktopFullscreen}
+              onSwitchToConsole={() => switchViewMode('console')}
+              canSwitchToConsole={!!currentVmId}
+              isMinimized={isDesktopMinimized}
+              onToggleMinimize={() => setIsDesktopMinimized(!isDesktopMinimized)}
+              onClose={() => {
+                setShowDesktop(null);
+                setShowConsole(null);
+                setCurrentVmId(null);
+                setVmViewMode(null);
+                setIsDesktopFullscreen(false);
+                setIsDesktopMinimized(false);
+              }}
+            />
           </motion.div>
         )}
       </AnimatePresence>

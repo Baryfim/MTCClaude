@@ -96,10 +96,24 @@ export interface UserVM {
 }
 
 export interface VMMetrics {
+  id: number;
+  tenant_name: string;
+  name: string;
+  agent_resource_id: string;
+  image: string;
   cpu_cores: number;
   ram_mb: number;
-  status: VMStatus;
   storage: number;
+  price_per_hour: number;
+  status: VMStatus;
+  created_at: string;
+  // Реальные метрики использования (если API возвращает)
+  cpu_percent?: number;
+  memory_used_mb?: number;
+  memory_limit_mb?: number;
+  disk_used_mb?: number;
+  disk_limit_bytes?: number;
+  online?: boolean;
 }
 
 export interface VMMetricsHistory {

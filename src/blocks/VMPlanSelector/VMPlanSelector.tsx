@@ -53,8 +53,8 @@ export const VMPlanSelector: React.FC<VMPlanSelectorProps> = ({ onSelect }) => {
           'POST',
           '/v1/resources/',
           {
-            name: "new",
-            image: "new",
+            resource_name: "dorowu123",
+            image: "dorowu:lxde",
             cpu_cores: selectedPlan.cpu,
             ram_mb: selectedPlan.ram,
             storage: selectedPlan.storage,

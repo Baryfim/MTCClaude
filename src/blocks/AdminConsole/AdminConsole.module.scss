@@ -73,6 +73,64 @@
   gap: 0.5rem;
 }
 
+.metricsBar {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.75rem 1.5rem;
+  background: rgba(0, 0, 0, 0.6);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.875rem;
+}
+
+.metric {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: rgba(255, 255, 255, 0.7);
+
+  svg {
+    color: #ef4444;
+  }
+
+  &.status {
+    margin-left: auto;
+  }
+}
+
+.metricLabel {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.metricValue {
+  color: white;
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+}
+
+.metricPercent {
+  color: rgba(255, 255, 255, 0.6);
+  margin-left: 0.25rem;
+}
+
+.statusDot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  
+  &.online {
+    background: #22c55e;
+    box-shadow: 0 0 10px #22c55e;
+  }
+  
+  &.offline {
+    background: #ef4444;
+    box-shadow: 0 0 10px #ef4444;
+  }
+}
+
 .switchButton {
   display: flex;
   align-items: center;
@@ -326,5 +384,43 @@
 
   &::placeholder {
     color: rgba(255, 255, 255, 0.3);
+  }
+}
+
+.minimizeButton {
+  padding: 0.5rem;
+  background: transparent;
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.3s;
+
+  &:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+  }
+}
+
+.container.minimized {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: auto;
+  max-height: 60px;
+  border-radius: 1rem 1rem 0 0;
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.5);
+  z-index: 200;
+  transition: all 0.3s ease;
+
+  &:hover {
+    box-shadow: 0 -15px 40px rgba(239, 68, 68, 0.3);
+  }
+
+  .header {
+    border-bottom: none;
+    cursor: pointer;
   }
 }

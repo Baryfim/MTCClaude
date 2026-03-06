@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Monitor, Maximize2, Minimize2, Settings, Terminal, X } from 'lucide-react';
+import { Monitor, Maximize2, Minimize2, Settings, Terminal, X, ChevronDown, ChevronUp } from 'lucide-react';
 import styles from './AdminDesktop.module.scss';
 import { apiRequestWithAuth } from '../../lib/api';
 
@@ -11,6 +11,8 @@ interface AdminDesktopProps {
   onSwitchToConsole?: () => void;
   canSwitchToConsole?: boolean;
   onClose?: () => void;
+  isMinimized?: boolean;
+  onToggleMinimize?: () => void;
 }
 
 export const AdminDesktop: React.FC<AdminDesktopProps> = ({ 
@@ -20,7 +22,9 @@ export const AdminDesktop: React.FC<AdminDesktopProps> = ({
   onToggleFullscreen,
   onSwitchToConsole,
   canSwitchToConsole,
-  onClose
+  onClose,
+  isMinimized = false,
+  onToggleMinimize
 }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -41,6 +45,16 @@ export const AdminDesktop: React.FC<AdminDesktopProps> = ({
   }, [vmId]);
 
   const toggleFullscreen = () => {
+    // Если окно минимизировано, сначала развернуть
+    if (isMinimized && onToggleMinimize) {
+      onToggleMinimize();
+      // Подождать немного, чтобы анимация развертывания завершилась
+      setTimeout(() => {
+        enterFullscreen();
+      }, 100);
+      return;
+    }
+    
     const newFullscreen = !isFullscreen;
     setIsFullscreen(newFullscreen);
     onToggleFullscreen?.(newFullscreen);
@@ -55,9 +69,17 @@ export const AdminDesktop: React.FC<AdminDesktopProps> = ({
       }
     }
   };
+  
+  const enterFullscreen = () => {
+    setIsFullscreen(true);
+    onToggleFullscreen?.(true);
+    document.documentElement.requestFullscreen().catch(err => {
+      console.error('Error attempting to enable fullscreen:', err);
+    });
+  };
 
   return (
-    <div className={`${styles.container} ${isFullscreen ? styles.fullscreen : ''}`}>
+    <div className={`${styles.container} ${isFullscreen ? styles.fullscreen : ''} ${isMinimized ? styles.minimized : ''}`}>
       <div className={styles.toolbar}>
         <div className={styles.toolbarLeft}>
           {onClose && (
@@ -127,10 +149,16 @@ export const AdminDesktop: React.FC<AdminDesktopProps> = ({
           <button onClick={toggleFullscreen} className={styles.fullscreenButton} title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}>
             {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
           </button>
+          {onToggleMinimize && (
+            <button onClick={onToggleMinimize} className={styles.minimizeButton} title={isMinimized ? "Expand" : "Minimize"}>
+              {isMinimized ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+            </button>
+          )}
         </div>
       </div>
 
-      <div className={styles.desktopView}>
+      {!isMinimized && (
+        <div className={styles.desktopView}>
         {guiUrl ? (
           <iframe 
             src={guiUrl} 
@@ -153,7 +181,8 @@ export const AdminDesktop: React.FC<AdminDesktopProps> = ({
             </div>
           </div>
         )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

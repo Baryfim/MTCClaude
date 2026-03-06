@@ -369,3 +369,41 @@
     background: rgba(255, 255, 255, 0.2);
   }
 }
+
+.minimizeButton {
+  padding: 0.5rem;
+  background: transparent;
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.3s;
+
+  &:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+  }
+}
+
+.container.minimized {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: auto;
+  max-height: 60px;
+  border-radius: 1rem 1rem 0 0;
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.5);
+  z-index: 200;
+  transition: all 0.3s ease;
+
+  &:hover {
+    box-shadow: 0 -15px 40px rgba(239, 68, 68, 0.3);
+  }
+
+  .toolbar {
+    border-bottom: none;
+    cursor: pointer;
+  }
+}

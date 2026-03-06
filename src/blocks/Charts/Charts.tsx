@@ -1,8 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Cpu, Activity } from 'lucide-react';
-import { useAppSelector } from '../../lib/hooks';
-import { selectMetricsHistory } from '../../lib/slices/vmMetricsSlice';
+import { useAppSelector, useAppDispatch } from '../../lib/hooks';
+import { selectMetricsHistory, fetchVMMetricsAsync } from '../../lib/slices/vmMetricsSlice';
 import { selectActiveVMs } from '../../lib/slices/userVMsSlice';
 import { VMMetricsTimeSeries } from '../../types';
 import styles from './Charts.module.scss';
@@ -12,8 +12,32 @@ interface ChartsProps {
 }
 
 export const Charts: React.FC<ChartsProps> = ({ vmId }) => {
+  const dispatch = useAppDispatch();
   const metricsHistory = useAppSelector(selectMetricsHistory);
   const activeVMs = useAppSelector(selectActiveVMs);
+
+  // Автоматически обновлять метрики первой VM каждые 10 секунд
+  useEffect(() => {
+    const firstVM = activeVMs[0];
+    if (!firstVM) return;
+
+    console.log('📊 [Charts] Настройка автообновления для VM:', firstVM.id, firstVM.name);
+
+    // Немедленно загрузить метрики
+    dispatch(fetchVMMetricsAsync(firstVM.id));
+
+    // Установить интервал обновления каждые 10 секунд
+    const interval = setInterval(() => {
+      console.log('🔄 [Charts] Обновление метрик для VM:', firstVM.id);
+      dispatch(fetchVMMetricsAsync(firstVM.id));
+    }, 10000);
+
+    // Очистить интервал при размонтировании или изменении списка VM
+    return () => {
+      console.log('🛑 [Charts] Очистка интервала обновления');
+      clearInterval(interval);
+    };
+  }, [activeVMs, dispatch]);
 
   // Преобразовать историю метрик в формат для графиков
   const chartData = useMemo<VMMetricsTimeSeries[]>(() => {
@@ -32,33 +56,39 @@ export const Charts: React.FC<ChartsProps> = ({ vmId }) => {
       return [];
     }
 
-    // Группировать метрики по времени (округлять до минут)
-    const timeGrouped = new Map<string, VMMetricsTimeSeries>();
-    
-    relevantHistory.forEach(({ timestamp, metrics }) => {
+    // Преобразовать каждую запись в данные для графика
+    const chartPoints = relevantHistory.map(({ timestamp, metrics }) => {
       const date = new Date(timestamp);
-      const timeKey = `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
+      const timeKey = `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`;
       
-      console.log(`🕒 [График] Метрика в ${timeKey}:`, metrics);
+      // Вычислить проценты использования
+      const cpuPercent = metrics.cpu_percent ?? 0;
+      const ramPercent = (metrics.memory_limit_mb && metrics.memory_limit_mb > 0)
+        ? ((metrics.memory_used_mb ?? 0) / metrics.memory_limit_mb) * 100 
+        : 0;
       
-      if (!timeGrouped.has(timeKey)) {
-        // ВАЖНО: Сервер возвращает конфигурацию, а не использование в %
-        // TODO: Когда API вернет реальные метрики использования, использовать их
-        console.warn(`⚠️ [График] API возвращает конфигурацию, а не % использования`);
-        
-        timeGrouped.set(timeKey, {
-          time: timeKey,
-          cpu: 0, // Ожидаем cpu_usage_percent от API
-          ram: 0, // Ожидаем ram_usage_percent от API
-          disk: 0, // Ожидаем disk_usage_percent от API
-          network: 0 // Ожидаем network_usage от API
-        });
-      }
+      const diskPercent = (metrics.disk_limit_bytes && metrics.disk_limit_bytes > 0)
+        ? (((metrics.disk_used_mb ?? 0) * 1024 * 1024) / metrics.disk_limit_bytes) * 100 
+        : 0;
+      
+      console.log(`🕒 [График] Метрика в ${timeKey}:`, {
+        cpu: cpuPercent,
+        ram: ramPercent,
+        disk: diskPercent,
+        online: metrics.online
+      });
+      
+      return {
+        time: timeKey,
+        cpu: cpuPercent,
+        ram: ramPercent,
+        disk: diskPercent,
+        network: 0,
+      };
     });
 
-    // Взять последние 24 точки данных
-    const sortedData = Array.from(timeGrouped.values())
-      .slice(-24);
+    // Взять последние 60 точек данных (10 минут с интервалом 10 секунд)
+    const sortedData = chartPoints.slice(-60);
 
     console.log('📊 [График] Итоговые данные:', sortedData);
     return sortedData;
@@ -70,7 +100,7 @@ export const Charts: React.FC<ChartsProps> = ({ vmId }) => {
       const vm = activeVMs.find(v => v.id === vmId);
       return vm ? `Мониторинг ресурсов - ${vm.name}` : 'Мониторинг ресурсов';
     }
-    return 'Мониторинг ресурсов за последние 24 часа';
+    return 'Мониторинг ресурсов в реальном времени (обновление каждые 10 сек)';
   }, [vmId, activeVMs]);
 
   return (
@@ -87,12 +117,12 @@ export const Charts: React.FC<ChartsProps> = ({ vmId }) => {
             <AreaChart data={chartData}>
               <defs>
                 <linearGradient id="colorCpu" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#000000" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#000000" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                 </linearGradient>
                 <linearGradient id="colorRam" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#666666" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#666666" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -122,7 +152,7 @@ export const Charts: React.FC<ChartsProps> = ({ vmId }) => {
               <Area 
                 type="monotone" 
                 dataKey="cpu" 
-                stroke="#000000" 
+                stroke="#3b82f6" 
                 strokeWidth={2}
                 fillOpacity={1} 
                 fill="url(#colorCpu)"
@@ -131,7 +161,7 @@ export const Charts: React.FC<ChartsProps> = ({ vmId }) => {
               <Area 
                 type="monotone" 
                 dataKey="ram" 
-                stroke="#666666" 
+                stroke="#10b981" 
                 strokeWidth={2}
                 fillOpacity={1} 
                 fill="url(#colorRam)"
@@ -144,7 +174,7 @@ export const Charts: React.FC<ChartsProps> = ({ vmId }) => {
         <div className={styles.chartCard}>
           <h3>
             <Activity />
-            Диск и сеть
+            Использование диска
           </h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={chartData}>
@@ -175,18 +205,10 @@ export const Charts: React.FC<ChartsProps> = ({ vmId }) => {
               <Line 
                 type="monotone" 
                 dataKey="disk" 
-                stroke="#000000" 
+                stroke="#f97316" 
                 strokeWidth={3}
-                dot={{ fill: '#000000', r: 4 }}
+                dot={{ fill: '#f97316', r: 4 }}
                 name="Диск"
-              />
-              <Line 
-                type="monotone" 
-                dataKey="network" 
-                stroke="#666666" 
-                strokeWidth={3}
-                dot={{ fill: '#666666', r: 4 }}
-                name="Сеть"
               />
             </LineChart>
           </ResponsiveContainer>

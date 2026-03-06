@@ -221,14 +221,14 @@ export const UserVMs: React.FC<UserVMsProps> = ({
                     <span>{vm.hostname}</span>
                     <span>{vm.ipAddress}</span>
                     <span className={`${styles.statusBadge} ${styles[vm.status]}`}>
-                      {vm.status === 'stopped' ? 'Остановлена' : 'Работает'}
+                      {vm.status === 'stopped' ? 'Остановлена' : vm.status === 'creating' ? 'Запускается...' : 'Работает'}
                     </span>
                   </div>
                 </div>
                 <div className={styles.actionButtons}>
                   <button 
                     onClick={() => onVMAction(vm.id, 'start')}
-                    disabled={vm.status === 'running'}
+                    disabled={vm.status === 'running' || vm.status === 'creating'}
                     className={styles.actionButton}
                     title="Start"
                   >
@@ -236,7 +236,7 @@ export const UserVMs: React.FC<UserVMsProps> = ({
                   </button>
                   <button 
                     onClick={() => onVMAction(vm.id, 'stop')}
-                    disabled={vm.status === 'stopped'}
+                    disabled={vm.status === 'stopped' || vm.status === 'creating'}
                     className={styles.actionButton}
                     title="Stop"
                   >
@@ -244,6 +244,7 @@ export const UserVMs: React.FC<UserVMsProps> = ({
                   </button>
                   <button 
                     onClick={() => onVMAction(vm.id, 'restart')}
+                    disabled={vm.status === 'creating'}
                     className={styles.actionButton}
                     title="Restart"
                   >

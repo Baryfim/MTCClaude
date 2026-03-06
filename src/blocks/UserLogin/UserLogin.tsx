@@ -101,8 +101,29 @@ export const UserLogin: React.FC<UserLoginProps> = ({ onLogin, onClose, mode }) 
     onLogin(username);
   };
 
-  const handleSelectProfile = (profile: string) => {
+  const handleSelectProfile = async (profile: string) => {
     setUsername(profile);
+    
+    // Автоматический вход для сохраненного профиля
+    setIsLoading(true);
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    if (enableBackend) {
+      // Если backend включен, все равно входим (можно добавить проверку токенов)
+      try {
+        // Попытка использовать сохраненные токены или вход без пароля
+        saveProfile(profile);
+        onLogin(profile);
+      } catch (err) {
+        setError('Ошибка входа. Введите пароль вручную.');
+        setIsLoading(false);
+        return;
+      }
+    } else {
+      // Для локального режима сразу входим
+      saveProfile(profile);
+      onLogin(profile);
+    }
   };
 
   const handleDeleteProfile = (profile: string, e: React.MouseEvent) => {

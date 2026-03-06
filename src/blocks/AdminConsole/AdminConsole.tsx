@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Terminal, Maximize2, Minimize2, Settings, Monitor, X } from 'lucide-react';
+import { Terminal, Maximize2, Minimize2, Settings, Monitor, X, ChevronDown, ChevronUp, Cpu, HardDrive, Activity } from 'lucide-react';
 import styles from './AdminConsole.module.scss';
 import { apiRequestWithAuth } from '../../lib/api';
+import { useAppDispatch, useAppSelector } from '../../lib/hooks';
+import { fetchVMMetricsAsync, selectVMMetricsById } from '../../lib/slices/vmMetricsSlice';
 
 interface AdminConsoleProps {
   vmId: number;
@@ -11,6 +13,8 @@ interface AdminConsoleProps {
   onSwitchToDesktop?: () => void;
   canSwitchToDesktop?: boolean;
   onClose?: () => void;
+  isMinimized?: boolean;
+  onToggleMinimize?: () => void;
 }
 
 export const AdminConsole: React.FC<AdminConsoleProps> = ({ 
@@ -20,8 +24,15 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
   onToggleFullscreen,
   onSwitchToDesktop,
   canSwitchToDesktop,
-  onClose
+  onClose,
+  isMinimized = false,
+  onToggleMinimize
 }) => {
+  const dispatch = useAppDispatch();
+  const vmMetrics = useAppSelector(selectVMMetricsById(vmId));
+  
+  console.log('🖥️ [AdminConsole] VM Metrics для vmId', vmId, ':', vmMetrics);
+  
   const [input, setInput] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -35,19 +46,17 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
     { type: 'output', text: '' },
   ]);
   const terminalRef = useRef<HTMLDivElement>(null);
-  const [cliUrl, setCliUrl] = useState<string | null>(null);
 
+  // Загрузить метрики при монтировании и периодически обновлять
   useEffect(() => {
-    const fetchCliUrl = async () => {
-      try {
-        const response = await apiRequestWithAuth<{ url: string }>('GET', `/v1/resources/${vmId}/console/cli/`);
-        setCliUrl(response.url);
-      } catch (error) {
-        console.error('Ошибка получения CLI URL:', error);
-      }
-    };
-    fetchCliUrl();
-  }, [vmId]);
+    dispatch(fetchVMMetricsAsync(vmId));
+    
+    const interval = setInterval(() => {
+      dispatch(fetchVMMetricsAsync(vmId));
+    }, 10000); // Обновлять каждые 10 секунд
+    
+    return () => clearInterval(interval);
+  }, [vmId, dispatch]);
 
   useEffect(() => {
     if (terminalRef.current) {
@@ -55,30 +64,78 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
     }
   }, [history]);
 
-  const handleCommand = (cmd: string) => {
+  const handleCommand = async (cmd: string) => {
     const trimmedCmd = cmd.trim();
     setHistory(prev => [...prev, { type: 'input', text: `root@${vmName}:~$ ${trimmedCmd}` }]);
 
     if (!trimmedCmd) return;
 
-    const commands: Record<string, string> = {
-      help: 'Available commands:\n  ls - list files\n  pwd - print working directory\n  date - show current date\n  uptime - show system uptime\n  clear - clear screen\n  help - show this help',
-      ls: 'Documents  Downloads  Pictures  Videos  projects',
-      pwd: '/root',
-      date: new Date().toString(),
-      uptime: 'up 2 days, 5 hours, 23 minutes'
-    };
-
+    // Локальная команда clear
     if (trimmedCmd.toLowerCase() === 'clear') {
       setHistory([{ type: 'output', text: '' }]);
       return;
     }
 
-    const output = commands[trimmedCmd.toLowerCase()] || `bash: ${trimmedCmd}: command not found`;
-    setHistory(prev => [...prev, { type: 'output', text: output }, { type: 'output', text: '' }]);
+    // Локальная команда help
+    if (trimmedCmd.toLowerCase() === 'help') {
+      const helpText = [
+        'Available commands:',
+        '',
+        '  clear      - Clear the terminal screen',
+        '  help       - Show this help message',
+        '  ls         - List directory contents',
+        '  pwd        - Print working directory',
+        '  cd         - Change directory',
+        '  cat        - Display file contents',
+        '  echo       - Display a line of text',
+        '  mkdir      - Create directory',
+        '  rm         - Remove files or directories',
+        '  cp         - Copy files',
+        '  mv         - Move/rename files',
+        '  touch      - Create empty file',
+        '  grep       - Search text patterns',
+        '  find       - Search for files',
+        '  ps         - Show running processes',
+        '  top        - Display system resources',
+        '  df         - Show disk space usage',
+        '  free       - Display memory usage',
+        '  uname      - Print system information',
+        '',
+        'Note: Most standard Linux commands are available.',
+        ''
+      ];
+      helpText.forEach(line => {
+        setHistory(prev => [...prev, { type: 'output', text: line }]);
+      });
+      return;
+    }
+
+    try {
+      const response = await apiRequestWithAuth<{ stdout: string; stderr: string; exit_code: number }>(
+        'POST',
+        `/v1/resources/${vmId}/exec/`,
+        { cmd: trimmedCmd }
+      );
+
+      const output = response.stderr || response.stdout || '';
+      setHistory(prev => [...prev, { type: 'output', text: output }, { type: 'output', text: '' }]);
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.message || error.message || 'Command execution failed';
+      setHistory(prev => [...prev, { type: 'output', text: `Error: ${errorMsg}` }, { type: 'output', text: '' }]);
+    }
   };
 
   const toggleFullscreen = () => {
+    // Если окно минимизировано, сначала развернуть
+    if (isMinimized && onToggleMinimize) {
+      onToggleMinimize();
+      // Подождать немного, чтобы анимация развертывания завершилась
+      setTimeout(() => {
+        enterFullscreen();
+      }, 100);
+      return;
+    }
+    
     const newFullscreen = !isFullscreen;
     setIsFullscreen(newFullscreen);
     onToggleFullscreen?.(newFullscreen);
@@ -91,6 +148,14 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
       document.exitFullscreen();
     }
   };
+  
+  const enterFullscreen = () => {
+    setIsFullscreen(true);
+    onToggleFullscreen?.(true);
+    document.documentElement.requestFullscreen().catch(err => 
+      console.error('Error attempting to enable fullscreen:', err)
+    );
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,7 +164,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
   };
 
   return (
-    <div className={`${styles.container} ${isFullscreen ? styles.fullscreen : ''}`}>
+    <div className={`${styles.container} ${isFullscreen ? styles.fullscreen : ''} ${isMinimized ? styles.minimized : ''}`}>
       <div className={styles.header}>
         <div className={styles.headerLeft}>
           {onClose && (
@@ -168,22 +233,54 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
           <button onClick={toggleFullscreen} className={styles.fullscreenButton} title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}>
             {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
           </button>
+          {onToggleMinimize && (
+            <button onClick={onToggleMinimize} className={styles.minimizeButton} title={isMinimized ? "Expand" : "Minimize"}>
+              {isMinimized ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+            </button>
+          )}
         </div>
       </div>
 
-      {cliUrl ? (
-        <iframe 
-          src={cliUrl} 
-          style={{ 
-            width: '100%', 
-            height: 'calc(100% - 60px)',
-            border: 'none',
-            display: 'block'
-          }}
-          title="Remote Console"
-        />
-      ) : (
+      {!isMinimized && (
         <>
+          {vmMetrics && (
+            <div className={styles.metricsBar}>
+              <div className={styles.metric}>
+                <Cpu className="w-4 h-4" />
+                <span className={styles.metricLabel}>CPU:</span>
+                <span className={styles.metricValue}>{(vmMetrics.cpu_percent ?? 0).toFixed(1)}%</span>
+              </div>
+              <div className={styles.metric}>
+                <Activity className="w-4 h-4" />
+                <span className={styles.metricLabel}>RAM:</span>
+                <span className={styles.metricValue}>
+                  {vmMetrics.memory_used_mb ?? 0} / {vmMetrics.memory_limit_mb ?? vmMetrics.ram_mb} MB
+                  {vmMetrics.memory_limit_mb && vmMetrics.memory_limit_mb > 0 && (
+                    <span className={styles.metricPercent}>
+                      ({(((vmMetrics.memory_used_mb ?? 0) / vmMetrics.memory_limit_mb) * 100).toFixed(1)}%)
+                    </span>
+                  )}
+                </span>
+              </div>
+              <div className={styles.metric}>
+                <HardDrive className="w-4 h-4" />
+                <span className={styles.metricLabel}>Disk:</span>
+                <span className={styles.metricValue}>
+                  {vmMetrics.disk_used_mb ?? 0} MB / {vmMetrics.disk_limit_bytes ? (vmMetrics.disk_limit_bytes / (1024 * 1024 * 1024)).toFixed(1) : vmMetrics.storage} GB
+                  {vmMetrics.disk_limit_bytes && vmMetrics.disk_limit_bytes > 0 && (
+                    <span className={styles.metricPercent}>
+                      ({((((vmMetrics.disk_used_mb ?? 0) * 1024 * 1024) / vmMetrics.disk_limit_bytes) * 100).toFixed(1)}%)
+                    </span>
+                  )}
+                </span>
+              </div>
+              <div className={`${styles.metric} ${styles.status}`}>
+                <span className={`${styles.statusDot} ${vmMetrics.online ? styles.online : styles.offline}`}></span>
+                <span className={styles.metricLabel}>{vmMetrics.online ? 'Online' : 'Offline'}</span>
+              </div>
+            </div>
+          )}
+          
           <div ref={terminalRef} className={styles.terminal} style={{ fontSize: `${fontSize}px` }}>
             {history.map((line, idx) => (
               <div 

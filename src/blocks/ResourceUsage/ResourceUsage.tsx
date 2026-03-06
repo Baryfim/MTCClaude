@@ -1,5 +1,6 @@
 import React from 'react';
 import { Cpu, Activity, HardDrive, Server } from 'lucide-react';
+import { formatNumber } from '../../lib/utils';
 import styles from './ResourceUsage.module.scss';
 
 interface ResourceUsageProps {
@@ -27,7 +28,7 @@ export const ResourceUsage: React.FC<ResourceUsageProps> = ({ usedResources, acc
             <Cpu />
             <span>CPU</span>
           </div>
-          <div className={styles.resourceValue}>{usedResources.cpu} / {accountLimits.cpu}</div>
+          <div className={styles.resourceValue}>{formatNumber(usedResources.cpu)} / {formatNumber(accountLimits.cpu)}</div>
           <div className={styles.progressBar}>
             <div 
               className={styles.progressFill}
@@ -41,7 +42,7 @@ export const ResourceUsage: React.FC<ResourceUsageProps> = ({ usedResources, acc
             <Activity />
             <span>RAM</span>
           </div>
-          <div className={styles.resourceValue}>{usedResources.ram} / {accountLimits.ram} МБ</div>
+          <div className={styles.resourceValue}>{formatNumber(usedResources.ram)} / {formatNumber(accountLimits.ram)} МБ</div>
           <div className={styles.progressBar}>
             <div 
               className={styles.progressFill}
@@ -55,7 +56,7 @@ export const ResourceUsage: React.FC<ResourceUsageProps> = ({ usedResources, acc
             <HardDrive />
             <span>Диск</span>
           </div>
-          <div className={styles.resourceValue}>{usedResources.storage} / {accountLimits.storage} GB</div>
+          <div className={styles.resourceValue}>{formatNumber(usedResources.storage)} / {formatNumber(accountLimits.storage)} GB</div>
           <div className={styles.progressBar}>
             <div 
               className={styles.progressFill}

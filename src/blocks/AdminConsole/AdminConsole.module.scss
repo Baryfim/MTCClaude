@@ -357,6 +357,7 @@
 .inputForm {
   display: flex;
   align-items: center;
+  gap: 0.75rem;
   padding: 1rem 1.5rem;
   background: rgba(0, 0, 0, 0.5);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -385,6 +386,32 @@
   &::placeholder {
     color: rgba(255, 255, 255, 0.3);
   }
+}
+
+.highLoadButton {
+  padding: 0.5rem 0.75rem;
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.flameIcon {
+  width: 1.125rem;
+  height: 1.125rem;
 }
 
 .minimizeButton {

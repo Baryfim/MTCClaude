@@ -59,7 +59,7 @@ export interface DeployedVM {
   id: number;
   name: string;
   hostname: string;
-  status: 'running' | 'stopped' | 'creating' | 'error';
+  status: 'running' | 'stopped' | 'creating' | 'error' | 'restarting';
   config: VMInstance;
   ipAddress: string;
   port?: number;

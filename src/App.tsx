@@ -16,8 +16,8 @@ import { UserVMs } from './blocks/UserVMs/UserVMs';
 import { UserLogin } from './blocks/UserLogin/UserLogin';
 import { VMPlanSelector } from './blocks/VMPlanSelector/VMPlanSelector';
 import { UsageHistory } from './blocks/UsageHistory/UsageHistory';
-import { ResourceWarning } from './blocks/ResourceWarning/ResourceWarning';
 import { DemoBanner } from './blocks/DemoBanner/DemoBanner';
+import { CriticalLoadModal } from './blocks/CriticalLoadModal/CriticalLoadModal';
 import styles from './App.module.scss';
 import { useAppDispatch, useAppSelector } from './lib/hooks';
 import { 
@@ -26,12 +26,13 @@ import {
   deleteVMAsync,
   startVMAsync,
   stopVMAsync,
-  restartVM,
+  restartVMAsync,
+  createSnapshotAsync,
   selectAllVMs,
   selectActivities,
   fetchUserVMs
 } from './lib/slices/userVMsSlice';
-import { selectVMMetrics } from './lib/slices/vmMetricsSlice';
+import { selectVMMetrics, setCriticalLoad, clearCriticalLoad, selectCriticalLoadVMId } from './lib/slices/vmMetricsSlice';
 import { apiRequestWithAuth, enableBackend } from './lib/api';
 import { isMobile } from './lib/mockData';
 
@@ -40,6 +41,7 @@ export default function App() {
   const vmsFromRedux = useAppSelector(selectAllVMs);
   const vmMetrics = useAppSelector(selectVMMetrics);
   const activities = useAppSelector(selectActivities);
+  const criticalLoadVMId = useAppSelector(selectCriticalLoadVMId);
   
   // Обогащаем VM данными метрик из VMMetrics
   const deployedVMs = useMemo(() => {
@@ -78,17 +80,12 @@ export default function App() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginMode, setLoginMode] = useState<'login' | 'register'>('login');
   
+  // Critical load modal state
+  const [showCriticalLoadModal, setShowCriticalLoadModal] = useState(false);
+  const [criticalLoadVM, setCriticalLoadVM] = useState<DeployedVM | null>(null);
+  
   // Определяем демо-режим (без подключения к БД и на мобильных)
   const isDemoMode = !enableBackend && isMobile();
-  
-  // Resource warning state
-  const [showResourceWarning, setShowResourceWarning] = useState(false);
-  const [warningDetails, setWarningDetails] = useState<{
-    vm: DeployedVM;
-    resourceType: 'cpu' | 'ram' | 'disk';
-    usage: number;
-  } | null>(null);
-  const [dismissedWarnings, setDismissedWarnings] = useState<Set<string>>(new Set());
 
   const accountLimits = {
     cpu: 8,
@@ -104,54 +101,38 @@ export default function App() {
     vms: deployedVMs.length
   }), [deployedVMs]);
 
-  // Отслеживание высокого потребления ресурсов
+  // Отслеживание критических нагрузок (>90%) с автоматической перезагрузкой
   useEffect(() => {
-    const THRESHOLD = 80; // Порог предупреждения 80%
+    const CRITICAL_THRESHOLD = 90;
     
     for (const vm of deployedVMs) {
-      // Проверяем CPU
-      if (vm.cpuUsage > THRESHOLD) {
-        const warningKey = `${vm.id}-cpu-${Math.floor(vm.cpuUsage / 10)}`;
-        if (!dismissedWarnings.has(warningKey)) {
-          setWarningDetails({
-            vm,
-            resourceType: 'cpu',
-            usage: vm.cpuUsage
-          });
-          setShowResourceWarning(true);
-          return;
-        }
-      }
+      // Пропускаем VM, которые уже перезагружаются
+      if (vm.status === 'restarting' || vm.status === 'creating') continue;
       
-      // Проверяем RAM
-      if (vm.ramUsage > THRESHOLD) {
-        const warningKey = `${vm.id}-ram-${Math.floor(vm.ramUsage / 10)}`;
-        if (!dismissedWarnings.has(warningKey)) {
-          setWarningDetails({
-            vm,
-            resourceType: 'ram',
-            usage: vm.ramUsage
-          });
-          setShowResourceWarning(true);
-          return;
-        }
-      }
+      const isCriticalCPU = vm.cpuUsage > CRITICAL_THRESHOLD;
+      const isCriticalRAM = vm.ramUsage > CRITICAL_THRESHOLD;
+      const isCriticalDisk = vm.diskUsage > CRITICAL_THRESHOLD;
       
-      // Проверяем Disk
-      if (vm.diskUsage > THRESHOLD) {
-        const warningKey = `${vm.id}-disk-${Math.floor(vm.diskUsage / 10)}`;
-        if (!dismissedWarnings.has(warningKey)) {
-          setWarningDetails({
-            vm,
-            resourceType: 'disk',
-            usage: vm.diskUsage
-          });
-          setShowResourceWarning(true);
-          return;
-        }
+      if (isCriticalCPU || isCriticalRAM || isCriticalDisk) {
+        // Показать модальное окно
+        setCriticalLoadVM(vm);
+        setShowCriticalLoadModal(true);
+        dispatch(setCriticalLoad(vm.id));
+        
+        // Автоматически создать снапшот и перезагрузить VM
+        setTimeout(async () => {
+          try {
+            await dispatch(createSnapshotAsync(vm.id));
+            await dispatch(restartVMAsync(vm.id));
+          } catch (error) {
+            console.error('Ошибка при автоматической перезагрузке VM:', error);
+          }
+        }, 1000);
+        
+        return;
       }
     }
-  }, [deployedVMs, dismissedWarnings]);
+  }, [deployedVMs, dispatch]);
 
   useEffect(() => {
     if (isLoggedIn && vmsFromRedux.length === 0) {
@@ -188,7 +169,7 @@ export default function App() {
         dispatch(stopVMAsync(vmId));
         break;
       case 'restart':
-        dispatch(restartVM(vmId));
+        dispatch(restartVMAsync(vmId));
         break;
     }
   };
@@ -246,29 +227,15 @@ export default function App() {
     dispatch(createVM(newVM));
     setCurrentView('dashboard');
   };
-  const handleCloseResourceWarning = () => {
-    if (warningDetails) {
-      const warningKey = `${warningDetails.vm.id}-${warningDetails.resourceType}-${Math.floor(warningDetails.usage / 10)}`;
-      setDismissedWarnings(prev => new Set([...prev, warningKey]));
+
+  const handleCloseCriticalLoadModal = () => {
+    setShowCriticalLoadModal(false);
+    setCriticalLoadVM(null);
+    if (criticalLoadVMId) {
+      dispatch(clearCriticalLoad());
     }
-    setShowResourceWarning(false);
-    setWarningDetails(null);
   };
 
-  const handleUpgradeVM = (newPlan: VMInstance) => {
-    if (!warningDetails) return;
-    
-    const updatedVM: DeployedVM = {
-      ...warningDetails.vm,
-      config: newPlan,
-      cpuUsage: (warningDetails.vm.cpuUsage / warningDetails.vm.config.cpu) * newPlan.cpu,
-      ramUsage: (warningDetails.vm.ramUsage / warningDetails.vm.config.ram) * newPlan.ram,
-      diskUsage: (warningDetails.vm.diskUsage / warningDetails.vm.config.storage) * newPlan.storage
-    };
-    
-    dispatch(updateVM(updatedVM));
-    handleCloseResourceWarning();
-  };
   const handleCreateSnapshot = async (vmId: number) => {
     const vm = deployedVMs.find(v => v.id === vmId);
     if (!vm) return;
@@ -310,8 +277,7 @@ export default function App() {
     
     if (vm && snapshot) {
       alert(`Восстановление ВМ "${vm.name}" из снапшота "${snapshot.name}"...\nВМ будет перезапущена.`);
-      // Here you would typically dispatch an action to restore from snapshot
-      dispatch(restartVM(vmId));
+      dispatch(restartVMAsync(vmId));
     }
   };
 
@@ -442,6 +408,24 @@ export default function App() {
         </main>
       ) : (
         <main>
+          {!enableBackend && isMobile() && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className={styles.demoVideo}
+            >
+              <h3 className={styles.demoVideoTitle}>Демонстрация пользовательского опыта</h3>
+              <div className={styles.demoVideoWrapper}>
+                <iframe
+                  src="https://drive.google.com/file/d/1DE6_agkbhpXIDufY95xl9hlBm0zMElqQ/preview"
+                  allow="autoplay"
+                  allowFullScreen
+                  className={styles.demoVideoIframe}
+                />
+              </div>
+            </motion.div>
+          )}
           <VMPlanSelector onSelect={handleCreateVM} />
         </main>
       )}
@@ -595,16 +579,16 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Resource Warning Modal */}
-      <ResourceWarning
-        isOpen={showResourceWarning}
-        vmName={warningDetails?.vm.name || ''}
-        currentPlan={warningDetails?.vm.config}
-        resourceType={warningDetails?.resourceType as 'cpu' | 'ram' | 'disk'}
-        currentUsage={warningDetails?.usage || 0}
-        onUpgrade={handleUpgradeVM}
-        onClose={handleCloseResourceWarning}
-      />
+      {/* Critical Load Modal */}
+      {showCriticalLoadModal && criticalLoadVM && (
+        <CriticalLoadModal
+          vmName={criticalLoadVM.name}
+          cpuUsage={criticalLoadVM.cpuUsage}
+          ramUsage={criticalLoadVM.ramUsage}
+          diskUsage={criticalLoadVM.diskUsage}
+          onClose={handleCloseCriticalLoadModal}
+        />
+      )}
     </div>
   );
 }

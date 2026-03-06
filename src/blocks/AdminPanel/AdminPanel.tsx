@@ -29,6 +29,7 @@ import {
 import { AdminVM, VMResourceUpdate } from '../../types';
 import { generateMockChartData, updateMockMetrics, generateMockPieChartData, isMobile, MetricPoint } from '../../lib/mockData';
 import { enableBackend } from '../../lib/api';
+import { formatNumber } from '../../lib/utils';
 import { DemoBanner } from '../DemoBanner/DemoBanner';
 import styles from './AdminPanel.module.scss';
 
@@ -204,10 +205,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
       .map(vm => {
         const metrics = vmMetrics[vm.id];
         const cpuPercent = metrics?.cpu_percent ?? 0;
+        const vmName = vm.name || 'Unnamed VM';
         return {
-          name: vm.name.length > 15 ? vm.name.substring(0, 15) + '...' : vm.name,
-          fullName: vm.name,
-          cpu: Number(cpuPercent.toFixed(1)),
+          name: vmName.length > 15 ? vmName.substring(0, 15) + '...' : vmName,
+          fullName: vmName,
+          cpu: Number(cpuPercent.toFixed(2)),
           tenant: vm.tenant_name
         };
       })
@@ -390,27 +392,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
                     style={{ fontSize: '12px' }}
                     label={{ value: 'CPU %', angle: -90, position: 'insideLeft', fill: '#94a3b8' }}
                   />
-                  <Tooltip
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        const data = payload[0].payload;
-                        return (
-                          <div style={{
-                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                            border: '1px solid rgba(239, 68, 68, 0.5)',
-                            borderRadius: '8px',
-                            padding: '8px 12px',
-                            color: '#fff'
-                          }}>
-                            <p style={{ margin: '0 0 4px 0', fontWeight: 600 }}>{data.fullName}</p>
-                            <p style={{ margin: '0', fontSize: '12px', color: '#94a3b8' }}>Пользователь: {data.tenant}</p>
-                            <p style={{ margin: '4px 0 0 0', color: '#ef4444', fontWeight: 600 }}>CPU: {data.cpu}%</p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
                   <Bar dataKey="cpu" fill="#ef4444" radius={[8, 8, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -433,14 +414,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
                   data={storageData}
                   cx="50%"
                   cy="50%"
-                  labelLine={true}
-                  label={({ name, value, percent }) => {
-                    if (percent < 0.03) return ''; // Не показываем лейбл для очень маленьких сегментов
-                    return `${name}: ${value}GB (${(percent * 100).toFixed(1)}%)`;
-                  }}
+                  labelLine={false}
+                  label={false}
                   outerRadius={90}
                   fill="#666666"
                   dataKey="value"
+                  isAnimationActive={false}
                 >
                   {storageData.map((entry, index) => {
                     const colorIndex = entry.name === 'Свободно' 
@@ -456,20 +435,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
                   height={36}
                   formatter={(value, entry: any) => {
                     const data = entry.payload;
-                    return `${data.name}: ${data.value}GB`;
+                    return `${data.name}: ${formatNumber(data.value)}GB`;
                   }}
                   wrapperStyle={{
                     fontSize: '12px',
                     color: '#94a3b8'
-                  }}
-                />
-                <Tooltip
-                  formatter={(value: any) => [`${value} GB`, 'Хранилище']}
-                  contentStyle={{
-                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '8px',
-                    color: '#fff'
                   }}
                 />
               </PieChart>
@@ -574,9 +544,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
                           {vm.status}
                         </span>
                       </td>
-                      <td>{vm.cpu_cores}</td>
-                      <td>{vm.ram_mb}</td>
-                      <td>{vm.storage || 'N/A'}</td>
+                      <td>{formatNumber(vm.cpu_cores)}</td>
+                      <td>{formatNumber(vm.ram_mb)}</td>
+                      <td>{vm.storage ? formatNumber(vm.storage) : 'N/A'}</td>
                       <td>{new Date(vm.created_at).toLocaleDateString('ru-RU')}</td>
                       <td>
                         <button

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Cpu, MemoryStick, HardDrive, Zap, Check, ChevronRight } from 'lucide-react';
 import { INSTANCE_TYPES, VMInstance, UserVM } from '../../types';
+import { formatNumber } from '../../lib/utils';
 import styles from './VMPlanSelector.module.scss';
 import { apiRequestWithAuth, enableBackend } from '../../lib/api';
 
@@ -28,12 +29,42 @@ export const VMPlanSelector: React.FC<VMPlanSelectorProps> = ({ onSelect }) => {
   const [selectedTier, setSelectedTier] = useState<string>('Общего назначения');
   const [selectedPlan, setSelectedPlan] = useState<VMInstance | null>(null);
   const [selectedOS, setSelectedOS] = useState<string | null>(null);
+  
+  // Custom plan configuration
+  const [customCPU, setCustomCPU] = useState<number>(2);
+  const [customRAM, setCustomRAM] = useState<number>(2048);
+  const [customStorage, setCustomStorage] = useState<number>(40);
 
   const tiers = Array.from(new Set(INSTANCE_TYPES.map(i => i.tier)));
   const filteredInstances = INSTANCE_TYPES.filter(i => i.tier === selectedTier);
 
+  // Calculate price based on custom configuration
+  const calculateCustomPrice = (cpu: number, ram: number, storage: number): number => {
+    // Pricing formula: CPU * $0.02 + RAM (GB) * $0.01 + Storage (GB) * $0.001
+    const ramGB = ram / 1024;
+    return Number((cpu * 0.02 + ramGB * 0.01 + storage * 0.001).toFixed(3));
+  };
+
+  const createCustomPlan = (): VMInstance => {
+    return {
+      id: 'custom',
+      name: 'Кастомная конфигурация',
+      cpu: customCPU,
+      ram: customRAM,
+      storage: customStorage,
+      pricePerHour: calculateCustomPrice(customCPU, customRAM, customStorage),
+      tier: 'Общего назначения'
+    };
+  };
+
   const handleSelectPlan = (instance: VMInstance) => {
     setSelectedPlan(instance);
+    setStep(2);
+  };
+
+  const handleSelectCustomPlan = () => {
+    const customPlan = createCustomPlan();
+    setSelectedPlan(customPlan);
     setStep(2);
   };
 
@@ -143,15 +174,15 @@ export const VMPlanSelector: React.FC<VMPlanSelectorProps> = ({ onSelect }) => {
                       <div className={styles.specs}>
                         <div className={styles.spec}>
                           <Cpu />
-                          <span>{instance.cpu} vCPU</span>
+                          <span>{formatNumber(instance.cpu)} vCPU</span>
                         </div>
                         <div className={styles.spec}>
                           <MemoryStick />
-                          <span>{instance.ram} МБ RAM</span>
+                          <span>{formatNumber(instance.ram)} МБ RAM</span>
                         </div>
                         <div className={styles.spec}>
                           <HardDrive />
-                          <span>{instance.storage} ГБ</span>
+                          <span>{formatNumber(instance.storage)} ГБ</span>
                         </div>
                       </div>
                     </div>
@@ -171,6 +202,129 @@ export const VMPlanSelector: React.FC<VMPlanSelectorProps> = ({ onSelect }) => {
                 </motion.div>
               ))}
             </div>
+
+            {/* Custom Plan Section - Always visible at the bottom */}            <div className={styles.customSectionDivider}>
+              <span>или создайте свою конфигурацию</span>
+            </div>
+            <div className={styles.customPlanContainer}>
+                <div className={styles.customPlanCard}>
+                  <h2>Настройте свою конфигурацию</h2>
+                  <p className={styles.customPlanDescription}>
+                    Используйте ползунки для выбора необходимых ресурсов
+                  </p>
+
+                  <div className={styles.sliderGroup}>
+                    <div className={styles.sliderLabel}>
+                      <div className={styles.sliderLabelHeader}>
+                        <Cpu className={styles.sliderIcon} />
+                        <span className={styles.sliderTitle}>vCPU</span>
+                      </div>
+                      <span className={styles.sliderValue}>{customCPU} ядер</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="1"
+                      max="16"
+                      step="1"
+                      value={customCPU}
+                      onChange={(e) => setCustomCPU(Number(e.target.value))}
+                      className={styles.slider}
+                    />
+                    <div className={styles.sliderTicks}>
+                      <span>1</span>
+                      <span>4</span>
+                      <span>8</span>
+                      <span>12</span>
+                      <span>16</span>
+                    </div>
+                  </div>
+
+                  <div className={styles.sliderGroup}>
+                    <div className={styles.sliderLabel}>
+                      <div className={styles.sliderLabelHeader}>
+                        <MemoryStick className={styles.sliderIcon} />
+                        <span className={styles.sliderTitle}>RAM</span>
+                      </div>
+                      <span className={styles.sliderValue}>{customRAM >= 1024 ? `${(customRAM / 1024).toFixed(1)} ГБ` : `${customRAM} МБ`}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="512"
+                      max="65536"
+                      step="512"
+                      value={customRAM}
+                      onChange={(e) => setCustomRAM(Number(e.target.value))}
+                      className={styles.slider}
+                    />
+                    <div className={styles.sliderTicks}>
+                      <span>512 МБ</span>
+                      <span>8 ГБ</span>
+                      <span>16 ГБ</span>
+                      <span>32 ГБ</span>
+                      <span>64 ГБ</span>
+                    </div>
+                  </div>
+
+                  <div className={styles.sliderGroup}>
+                    <div className={styles.sliderLabel}>
+                      <div className={styles.sliderLabelHeader}>
+                        <HardDrive className={styles.sliderIcon} />
+                        <span className={styles.sliderTitle}>Storage</span>
+                      </div>
+                      <span className={styles.sliderValue}>{customStorage} ГБ</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="20"
+                      max="1000"
+                      step="10"
+                      value={customStorage}
+                      onChange={(e) => setCustomStorage(Number(e.target.value))}
+                      className={styles.slider}
+                    />
+                    <div className={styles.sliderTicks}>
+                      <span>20</span>
+                      <span>250</span>
+                      <span>500</span>
+                      <span>750</span>
+                      <span>1000</span>
+                    </div>
+                  </div>
+
+                  <div className={styles.customPricingCard}>
+                    <div className={styles.pricingBreakdown}>
+                      <div className={styles.pricingItem}>
+                        <span>CPU ({customCPU} ядер)</span>
+                        <span>${(customCPU * 0.02).toFixed(3)}/час</span>
+                      </div>
+                      <div className={styles.pricingItem}>
+                        <span>RAM ({(customRAM / 1024).toFixed(1)} ГБ)</span>
+                        <span>${((customRAM / 1024) * 0.01).toFixed(3)}/час</span>
+                      </div>
+                      <div className={styles.pricingItem}>
+                        <span>Storage ({customStorage} ГБ)</span>
+                        <span>${(customStorage * 0.001).toFixed(3)}/час</span>
+                      </div>
+                      <div className={styles.pricingDivider}></div>
+                      <div className={styles.pricingTotal}>
+                        <span>Итого</span>
+                        <div className={styles.totalPriceGroup}>
+                          <span className={styles.totalPrice}>${calculateCustomPrice(customCPU, customRAM, customStorage)}/час</span>
+                          <span className={styles.totalPriceMonthly}>~${(calculateCustomPrice(customCPU, customRAM, customStorage) * 730).toFixed(2)}/месяц</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleSelectCustomPlan}
+                    className={styles.selectCustomButton}
+                  >
+                    <span>Продолжить с этой конфигурацией</span>
+                    <ChevronRight />
+                  </button>
+                </div>
+              </div>
           </motion.div>
         ) : (
           <motion.div

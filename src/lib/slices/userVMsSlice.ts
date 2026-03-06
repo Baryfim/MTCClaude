@@ -106,6 +106,41 @@ export const deleteVMAsync = createAsyncThunk(
   }
 );
 
+export const restartVMAsync = createAsyncThunk(
+  'userVMs/restartVM',
+  async (vmId: number, { dispatch }) => {
+    // Останавливаем VM
+    if (enableBackend) {
+      await apiRequestWithAuth('POST', `/v1/resources/${vmId}/stop/`);
+    }
+    
+    // Ждем 4 секунды
+    await new Promise(resolve => setTimeout(resolve, 4000));
+    
+    // Запускаем VM
+    if (enableBackend) {
+      await apiRequestWithAuth('POST', `/v1/resources/${vmId}/start/`);
+    }
+    
+    // Переводим статус в running
+    setTimeout(() => {
+      dispatch(completeVMRestart(vmId));
+    }, 2000);
+    
+    return vmId;
+  }
+);
+
+export const createSnapshotAsync = createAsyncThunk(
+  'userVMs/createSnapshot',
+  async (vmId: number) => {
+    if (enableBackend) {
+      await apiRequestWithAuth('POST', `/v1/resources/${vmId}/snapshot/`);
+    }
+    return vmId;
+  }
+);
+
 interface UserVMsState {
   activeVMs: DeployedVM[];
   inactiveVMs: DeployedVM[];
@@ -197,6 +232,15 @@ const userVMsSlice = createSlice({
         if (activeVM) activeVM.status = 'running';
       }
     },
+
+    completeVMRestart: (state, action: PayloadAction<number>) => {
+      const vmId = action.payload;
+      const vm = state.activeVMs.find(vm => vm.id === vmId);
+      if (vm) {
+        vm.status = 'running';
+        addActivity(state, 'ВМ перезагружена', vm.name);
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -252,6 +296,14 @@ const userVMsSlice = createSlice({
           state.inactiveVMs = state.inactiveVMs.filter(vm => vm.id !== action.payload);
           addActivity(state, 'Удалена ВМ', deletedVM.name);
         }
+      })
+      .addCase(restartVMAsync.pending, (state, action) => {
+        const vmId = action.meta.arg;
+        const vm = state.activeVMs.find(v => v.id === vmId);
+        if (vm) {
+          vm.status = 'restarting';
+          addActivity(state, 'Перезагрузка ВМ', vm.name);
+        }
       });
   },
 });
@@ -266,6 +318,7 @@ export const {
   setError,
   clearVMs,
   completeVMStart,
+  completeVMRestart,
 } = userVMsSlice.actions;
 
 // Селекторы

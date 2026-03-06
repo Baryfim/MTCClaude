@@ -157,6 +157,21 @@
     background: rgba(234, 179, 8, 0.1);
     color: #a16207;
   }
+
+  &.restarting {
+    background: rgba(59, 130, 246, 0.1);
+    color: #1d4ed8;
+    animation: pulse 2s ease-in-out infinite;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
 
 .actionButtons {

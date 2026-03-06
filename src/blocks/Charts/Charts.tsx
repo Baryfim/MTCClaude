@@ -172,7 +172,7 @@ export const Charts: React.FC<ChartsProps> = ({ vmId }) => {
                   boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
                   fontWeight: 'bold'
                 }}
-                formatter={(value: number) => [`${value.toFixed(1)}%`, '']}
+                formatter={(value: number) => [`${value.toFixed(2)}%`, '']}
               />
               <Legend 
                 wrapperStyle={{ fontWeight: 'bold', fontSize: '12px' }}
@@ -225,7 +225,7 @@ export const Charts: React.FC<ChartsProps> = ({ vmId }) => {
                   boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
                   fontWeight: 'bold'
                 }}
-                formatter={(value: number) => [`${value.toFixed(1)}%`, '']}
+                formatter={(value: number) => [`${value.toFixed(2)}%`, '']}
               />
               <Legend 
                 wrapperStyle={{ fontWeight: 'bold', fontSize: '12px' }}

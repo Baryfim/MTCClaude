@@ -47,6 +47,7 @@ export const fetchAllVMMetricsAsync = createAsyncThunk(
 interface VMMetricsState {
   metrics: Record<string, VMMetrics>;
   history: VMMetricsHistory[];
+  criticalLoadVMId: number | null;
   loading: boolean;
   error: string | null;
 }
@@ -54,6 +55,7 @@ interface VMMetricsState {
 const initialState: VMMetricsState = {
   metrics: {},
   history: [],
+  criticalLoadVMId: null,
   loading: false,
   error: null,
 };
@@ -81,6 +83,14 @@ const vmMetricsSlice = createSlice({
           state.history.splice(vmHistoryIndex, 1);
         }
       }
+    },
+
+    setCriticalLoad: (state, action: PayloadAction<number>) => {
+      state.criticalLoadVMId = action.payload;
+    },
+
+    clearCriticalLoad: (state) => {
+      state.criticalLoadVMId = null;
     },
 
     clearMetricsHistory: (state) => {
@@ -143,6 +153,8 @@ const vmMetricsSlice = createSlice({
 
 export const {
   updateVMMetrics,
+  setCriticalLoad,
+  clearCriticalLoad,
   clearMetricsHistory,
   removeVMMetrics,
   clearAllMetrics,
@@ -151,6 +163,7 @@ export const {
 // Селекторы
 export const selectVMMetrics = (state: { vmMetrics: VMMetricsState }) => state.vmMetrics.metrics;
 export const selectMetricsHistory = (state: { vmMetrics: VMMetricsState }) => state.vmMetrics.history;
+export const selectCriticalLoadVMId = (state: { vmMetrics: VMMetricsState }) => state.vmMetrics.criticalLoadVMId;
 export const selectMetricsLoading = (state: { vmMetrics: VMMetricsState }) => state.vmMetrics.loading;
 export const selectMetricsError = (state: { vmMetrics: VMMetricsState }) => state.vmMetrics.error;
 export const selectVMMetricsById = (vmId: number) => (state: { vmMetrics: VMMetricsState }) => 

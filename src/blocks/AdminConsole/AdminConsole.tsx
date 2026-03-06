@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Terminal, Maximize2, Minimize2, Settings, Monitor, X, ChevronDown, ChevronUp, Cpu, HardDrive, Activity } from 'lucide-react';
+import { Terminal, Maximize2, Minimize2, Settings, Monitor, X, ChevronDown, ChevronUp, Cpu, HardDrive, Activity, Flame } from 'lucide-react';
 import styles from './AdminConsole.module.scss';
 import { apiRequestWithAuth } from '../../lib/api';
 import { useAppDispatch, useAppSelector } from '../../lib/hooks';
@@ -163,6 +163,10 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
     setInput('');
   };
 
+  const emulateHighLoad = () => {
+    setInput('yes > /dev/null');
+  };
+
   return (
     <div className={`${styles.container} ${isFullscreen ? styles.fullscreen : ''} ${isMinimized ? styles.minimized : ''}`}>
       <div className={styles.header}>
@@ -248,7 +252,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
               <div className={styles.metric}>
                 <Cpu className="w-4 h-4" />
                 <span className={styles.metricLabel}>CPU:</span>
-                <span className={styles.metricValue}>{(vmMetrics.cpu_percent ?? 0).toFixed(1)}%</span>
+                <span className={styles.metricValue}>{(vmMetrics.cpu_percent ?? 0).toFixed(2)}%</span>
               </div>
               <div className={styles.metric}>
                 <Activity className="w-4 h-4" />
@@ -257,7 +261,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                   {vmMetrics.memory_used_mb ?? 0} / {vmMetrics.memory_limit_mb ?? vmMetrics.ram_mb} MB
                   {vmMetrics.memory_limit_mb && vmMetrics.memory_limit_mb > 0 && (
                     <span className={styles.metricPercent}>
-                      ({(((vmMetrics.memory_used_mb ?? 0) / vmMetrics.memory_limit_mb) * 100).toFixed(1)}%)
+                      ({(((vmMetrics.memory_used_mb ?? 0) / vmMetrics.memory_limit_mb) * 100).toFixed(2)}%)
                     </span>
                   )}
                 </span>
@@ -269,7 +273,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                   {vmMetrics.disk_used_mb ?? 0} MB / {vmMetrics.disk_limit_bytes ? (vmMetrics.disk_limit_bytes / (1024 * 1024 * 1024)).toFixed(1) : vmMetrics.storage} GB
                   {vmMetrics.disk_limit_bytes && vmMetrics.disk_limit_bytes > 0 && (
                     <span className={styles.metricPercent}>
-                      ({((((vmMetrics.disk_used_mb ?? 0) * 1024 * 1024) / vmMetrics.disk_limit_bytes) * 100).toFixed(1)}%)
+                      ({((((vmMetrics.disk_used_mb ?? 0) * 1024 * 1024) / vmMetrics.disk_limit_bytes) * 100).toFixed(2)}%)
                     </span>
                   )}
                 </span>
@@ -302,6 +306,14 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
               placeholder="Type a command..."
               autoFocus
             />
+            <button 
+              onClick={emulateHighLoad}
+              className={styles.highLoadButton}
+              title="Эмулировать адскую нагрузку (yes > /dev/null)"
+              type="button"
+            >
+              <Flame className={styles.flameIcon} />
+            </button>
           </form>
         </>
       )}

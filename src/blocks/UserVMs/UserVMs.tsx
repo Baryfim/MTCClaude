@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Server, Play, Square, RotateCw, Trash2, Network, Clock, Terminal, Monitor, Cpu, HardDrive, Activity, Zap, Camera, Edit2, Check, X, RotateCcw } from 'lucide-react';
+import { formatNumber } from '../../lib/utils';
 import styles from './UserVMs.module.scss';
 
 export interface VMSnapshot {
@@ -223,14 +224,17 @@ export const UserVMs: React.FC<UserVMsProps> = ({
                     <span>{vm.hostname}</span>
                     <span>PORT: {vm.port || 5900}</span>
                     <span className={`${styles.statusBadge} ${styles[vm.status]}`}>
-                      {vm.status === 'stopped' ? 'Остановлена' : vm.status === 'creating' ? 'Запускается...' : 'Работает'}
+                      {vm.status === 'stopped' ? 'Остановлена' : 
+                       vm.status === 'creating' ? 'Запускается...' : 
+                       vm.status === 'restarting' ? 'Перезагрузка...' :
+                       'Работает'}
                     </span>
                   </div>
                 </div>
                 <div className={styles.actionButtons}>
                   <button 
                     onClick={() => onVMAction(vm.id, 'start')}
-                    disabled={vm.status === 'running' || vm.status === 'creating'}
+                    disabled={vm.status === 'running' || vm.status === 'creating' || vm.status === 'restarting'}
                     className={styles.actionButton}
                     title="Start"
                   >
@@ -238,7 +242,7 @@ export const UserVMs: React.FC<UserVMsProps> = ({
                   </button>
                   <button 
                     onClick={() => onVMAction(vm.id, 'stop')}
-                    disabled={vm.status === 'stopped' || vm.status === 'creating'}
+                    disabled={vm.status === 'stopped' || vm.status === 'creating' || vm.status === 'restarting'}
                     className={styles.actionButton}
                     title="Stop"
                   >
@@ -246,7 +250,7 @@ export const UserVMs: React.FC<UserVMsProps> = ({
                   </button>
                   <button 
                     onClick={() => onVMAction(vm.id, 'restart')}
-                    disabled={vm.status === 'creating'}
+                    disabled={vm.status === 'creating' || vm.status === 'restarting'}
                     className={styles.actionButton}
                     title="Restart"
                   >
@@ -277,7 +281,7 @@ export const UserVMs: React.FC<UserVMsProps> = ({
                         <Cpu className={styles.metricIcon} style={{ color: getUsageColor(vm.cpuUsage) }} />
                         Использование процессора
                       </span>
-                      <span className={styles.metricBarValue}>{vm.cpuUsage}%</span>
+                      <span className={styles.metricBarValue}>{vm.cpuUsage.toFixed(2)}%</span>
                     </div>
                     <div className={styles.progressBarTrack}>
                       <div 
@@ -296,7 +300,7 @@ export const UserVMs: React.FC<UserVMsProps> = ({
                         <Zap className={styles.metricIcon} style={{ color: getUsageColor(vm.ramUsage) }} />
                         Использование памяти
                       </span>
-                      <span className={styles.metricBarValue}>{vm.ramUsage}% ({Math.round(vm.config.ram * vm.ramUsage / 100)} / {vm.config.ram} МБ)</span>
+                      <span className={styles.metricBarValue}>{vm.ramUsage.toFixed(2)}% ({formatNumber(Math.round(vm.config.ram * vm.ramUsage / 100))} / {formatNumber(vm.config.ram)} МБ)</span>
                     </div>
                     <div className={styles.progressBarTrack}>
                       <div 
@@ -315,7 +319,7 @@ export const UserVMs: React.FC<UserVMsProps> = ({
                         <HardDrive className={styles.metricIcon} style={{ color: getUsageColor(vm.diskUsage) }} />
                         Использование диска
                       </span>
-                      <span className={styles.metricBarValue}>{vm.diskUsage}% ({Math.round(vm.config.storage * vm.diskUsage / 100)} / {vm.config.storage} GB)</span>
+                      <span className={styles.metricBarValue}>{vm.diskUsage.toFixed(2)}% ({formatNumber(Math.round(vm.config.storage * vm.diskUsage / 100))} / {formatNumber(vm.config.storage)} GB)</span>
                     </div>
                     <div className={styles.progressBarTrack}>
                       <div 

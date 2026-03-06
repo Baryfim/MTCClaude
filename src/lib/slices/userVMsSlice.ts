@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
-import { DeployedVM, Activity } from '../../types';
+import { DeployedVM, Activity, UserVM, VMInstance, INSTANCE_TYPES } from '../../types';
 import { apiRequestWithAuth, enableBackend } from '../api';
 
 const addActivity = (state: UserVMsState, action: string, vmName: string) => {
@@ -12,7 +12,56 @@ const addActivity = (state: UserVMsState, action: string, vmName: string) => {
   });
 };
 
+const mapUserVMToDeployedVM = (vm: UserVM): DeployedVM => {
+  const existingInstance = INSTANCE_TYPES.find(
+    inst => inst.cpu === vm.cpu_cores && inst.ram === vm.ram_mb
+  );
+  
+  const config: VMInstance = existingInstance || {
+    id: `custom-${vm.id}`,
+    name: 'Пользовательская',
+    cpu: vm.cpu_cores,
+    ram: vm.ram_mb,
+    storage: vm.storage || 20,
+    pricePerHour: vm.price_per_hour || 0,
+    tier: 'Общего назначения'
+  };
+
+  const statusMap: Record<string, 'running' | 'stopped' | 'creating' | 'error'> = {
+    'RUNNING': 'running',
+    'STOPPED': 'stopped',
+    'CREATING': 'creating',
+    'ERROR': 'error',
+    'DELETING': 'stopped'
+  };
+
+  return {
+    id: vm.id,
+    name: vm.name,
+    hostname: vm.tenant_name,
+    status: statusMap[vm.status] || 'stopped',
+    config,
+    ipAddress: '0.0.0.0',
+    port: 5900,
+    cpuUsage: 0,
+    ramUsage: 0,
+    diskUsage: 0,
+    uptime: '0ч',
+    network: 'default',
+    snapshots: []
+  };
+};
+
 // Асинхронные thunks для управления VM пользователя
+export const fetchUserVMs = createAsyncThunk(
+  'userVMs/fetchUserVMs',
+  async () => {
+    if (!enableBackend) return [];
+    const vms = await apiRequestWithAuth<UserVM[]>('GET', '/v1/resources/');
+    return vms.map(mapUserVMToDeployedVM);
+  }
+);
+
 export const startVMAsync = createAsyncThunk(
   'userVMs/startVM',
   async (vmId: number, { dispatch }) => {
@@ -144,6 +193,19 @@ const userVMsSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      .addCase(fetchUserVMs.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(fetchUserVMs.fulfilled, (state, action) => {
+        state.loading = false;
+        const vms = action.payload;
+        state.activeVMs = vms.filter(vm => vm.status === 'running' || vm.status === 'creating');
+        state.inactiveVMs = vms.filter(vm => vm.status === 'stopped' || vm.status === 'error');
+      })
+      .addCase(fetchUserVMs.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Ошибка загрузки VM';
+      })
       .addCase(startVMAsync.pending, (state, action) => {
         const vmId = action.meta.arg;
         const vm = state.inactiveVMs.find(v => v.id === vmId) || state.activeVMs.find(v => v.id === vmId);

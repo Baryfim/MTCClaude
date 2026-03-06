@@ -219,7 +219,7 @@ export const UserVMs: React.FC<UserVMsProps> = ({
                   <h3>{vm.name}</h3>
                   <div className={styles.vmMeta}>
                     <span>{vm.hostname}</span>
-                    <span>{vm.ipAddress}</span>
+                    <span>PORT: {vm.port || 5900}</span>
                     <span className={`${styles.statusBadge} ${styles[vm.status]}`}>
                       {vm.status === 'stopped' ? 'Остановлена' : vm.status === 'creating' ? 'Запускается...' : 'Работает'}
                     </span>
@@ -347,7 +347,7 @@ export const UserVMs: React.FC<UserVMsProps> = ({
                 </div>
                 <div className={styles.detail}>
                   <Clock />
-                  <span>Uptime: {vm.uptime}</span>
+                  <span>{vm.uptime}</span>
                 </div>
               </div>
 

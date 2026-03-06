@@ -311,6 +311,38 @@
       flex-shrink: 0;
     }
   }
+
+  // Стили для легенды диаграммы
+  :global(.recharts-legend-wrapper) {
+    margin-top: 1rem;
+    
+    :global(.recharts-legend-item) {
+      margin-right: 1rem !important;
+      margin-bottom: 0.5rem;
+    }
+  }
+
+  // Стили для лейблов на диаграмме
+  :global(.recharts-pie-label-text) {
+    fill: white;
+    font-size: 11px;
+    font-weight: 600;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+  }
+
+  // Стили для линий лейблов
+  :global(.recharts-pie-label-line) {
+    stroke: rgba(255, 255, 255, 0.5);
+  }
+
+  .emptyChart {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 300px;
+    color: #94a3b8;
+    font-size: 0.875rem;
+  }
 }
 
 .sessionsPanel {
@@ -348,6 +380,85 @@
     background: rgba(239, 68, 68, 0.2);
     padding: 0.25rem 0.75rem;
     border-radius: 0.5rem;
+  }
+}
+
+.controls {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid rgba(239, 68, 68, 0.2);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.3);
+
+  .filterGroup,
+  .sortGroup {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+
+    svg {
+      color: #fca5a5;
+      flex-shrink: 0;
+    }
+
+    span {
+      color: #fca5a5;
+      font-size: 0.875rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+  }
+
+  .filterButton {
+    padding: 0.5rem 1rem;
+    background: rgba(239, 68, 68, 0.2);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 0.5rem;
+    color: white;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+
+    &:hover {
+      background: rgba(239, 68, 68, 0.3);
+      border-color: rgba(239, 68, 68, 0.5);
+    }
+
+    &.active {
+      background: #ef4444;
+      border-color: #dc2626;
+    }
+  }
+
+  .sortSelect {
+    padding: 0.5rem 1rem;
+    background: rgba(239, 68, 68, 0.2);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 0.5rem;
+    color: white;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 150px;
+
+    &:hover {
+      background: rgba(239, 68, 68, 0.3);
+      border-color: rgba(239, 68, 68, 0.5);
+    }
+
+    &:focus {
+      outline: none;
+      border-color: #ef4444;
+    }
+
+    option {
+      background: #000000;
+      color: white;
+    }
   }
 }
 

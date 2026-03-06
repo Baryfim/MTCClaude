@@ -7,7 +7,7 @@ import {
   Server,
   ChevronLeft
 } from 'lucide-react';
-import { VMInstance, UserVM } from './types';
+import { VMInstance, UserVM, DeployedVM } from './types';
 import { AdminConsole } from './blocks/AdminConsole/AdminConsole';
 import { AdminDesktop } from './blocks/AdminDesktop/AdminDesktop';
 import { Charts } from './blocks/Charts/Charts';
@@ -16,6 +16,7 @@ import { UserVMs } from './blocks/UserVMs/UserVMs';
 import { UserLogin } from './blocks/UserLogin/UserLogin';
 import { VMPlanSelector } from './blocks/VMPlanSelector/VMPlanSelector';
 import { UsageHistory } from './blocks/UsageHistory/UsageHistory';
+import { ResourceWarning } from './blocks/ResourceWarning/ResourceWarning';
 import styles from './App.module.scss';
 import { useAppDispatch, useAppSelector } from './lib/hooks';
 import { 
@@ -26,7 +27,8 @@ import {
   stopVMAsync,
   restartVM,
   selectAllVMs,
-  selectActivities
+  selectActivities,
+  fetchUserVMs
 } from './lib/slices/userVMsSlice';
 import { selectVMMetrics } from './lib/slices/vmMetricsSlice';
 import { apiRequestWithAuth } from './lib/api';
@@ -73,6 +75,15 @@ export default function App() {
   const [currentVmId, setCurrentVmId] = useState<string | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginMode, setLoginMode] = useState<'login' | 'register'>('login');
+  
+  // Resource warning state
+  const [showResourceWarning, setShowResourceWarning] = useState(false);
+  const [warningDetails, setWarningDetails] = useState<{
+    vm: DeployedVM;
+    resourceType: 'cpu' | 'ram' | 'disk';
+    usage: number;
+  } | null>(null);
+  const [dismissedWarnings, setDismissedWarnings] = useState<Set<string>>(new Set());
 
   const accountLimits = {
     cpu: 8,
@@ -87,6 +98,61 @@ export default function App() {
     storage: deployedVMs.reduce((sum, vm) => sum + vm.config.storage, 0),
     vms: deployedVMs.length
   }), [deployedVMs]);
+
+  // Отслеживание высокого потребления ресурсов
+  useEffect(() => {
+    const THRESHOLD = 80; // Порог предупреждения 80%
+    
+    for (const vm of deployedVMs) {
+      // Проверяем CPU
+      if (vm.cpuUsage > THRESHOLD) {
+        const warningKey = `${vm.id}-cpu-${Math.floor(vm.cpuUsage / 10)}`;
+        if (!dismissedWarnings.has(warningKey)) {
+          setWarningDetails({
+            vm,
+            resourceType: 'cpu',
+            usage: vm.cpuUsage
+          });
+          setShowResourceWarning(true);
+          return;
+        }
+      }
+      
+      // Проверяем RAM
+      if (vm.ramUsage > THRESHOLD) {
+        const warningKey = `${vm.id}-ram-${Math.floor(vm.ramUsage / 10)}`;
+        if (!dismissedWarnings.has(warningKey)) {
+          setWarningDetails({
+            vm,
+            resourceType: 'ram',
+            usage: vm.ramUsage
+          });
+          setShowResourceWarning(true);
+          return;
+        }
+      }
+      
+      // Проверяем Disk
+      if (vm.diskUsage > THRESHOLD) {
+        const warningKey = `${vm.id}-disk-${Math.floor(vm.diskUsage / 10)}`;
+        if (!dismissedWarnings.has(warningKey)) {
+          setWarningDetails({
+            vm,
+            resourceType: 'disk',
+            usage: vm.diskUsage
+          });
+          setShowResourceWarning(true);
+          return;
+        }
+      }
+    }
+  }, [deployedVMs, dismissedWarnings]);
+
+  useEffect(() => {
+    if (isLoggedIn && vmsFromRedux.length === 0) {
+      dispatch(fetchUserVMs());
+    }
+  }, [isLoggedIn, vmsFromRedux.length, dispatch]);
 
   const handleLogin = (username: string) => {
     setUserName(username);
@@ -163,10 +229,11 @@ export default function App() {
       status: 'stopped',
       config: selectedInstance,
       ipAddress: `10.0.1.${10 + deployedVMs.length}`,
+      port: 5900 + deployedVMs.length,
       cpuUsage: 0,
       ramUsage: 0,
       diskUsage: 0,
-      uptime: '0h 0m',
+      uptime: '0ч',
       network: 'default-network',
       snapshots: []
     };
@@ -174,7 +241,29 @@ export default function App() {
     dispatch(createVM(newVM));
     setCurrentView('dashboard');
   };
+  const handleCloseResourceWarning = () => {
+    if (warningDetails) {
+      const warningKey = `${warningDetails.vm.id}-${warningDetails.resourceType}-${Math.floor(warningDetails.usage / 10)}`;
+      setDismissedWarnings(prev => new Set([...prev, warningKey]));
+    }
+    setShowResourceWarning(false);
+    setWarningDetails(null);
+  };
 
+  const handleUpgradeVM = (newPlan: VMInstance) => {
+    if (!warningDetails) return;
+    
+    const updatedVM: DeployedVM = {
+      ...warningDetails.vm,
+      config: newPlan,
+      cpuUsage: (warningDetails.vm.cpuUsage / warningDetails.vm.config.cpu) * newPlan.cpu,
+      ramUsage: (warningDetails.vm.ramUsage / warningDetails.vm.config.ram) * newPlan.ram,
+      diskUsage: (warningDetails.vm.diskUsage / warningDetails.vm.config.storage) * newPlan.storage
+    };
+    
+    dispatch(updateVM(updatedVM));
+    handleCloseResourceWarning();
+  };
   const handleCreateSnapshot = async (vmId: number) => {
     const vm = deployedVMs.find(v => v.id === vmId);
     if (!vm) return;
@@ -496,6 +585,17 @@ export default function App() {
           />
         )}
       </AnimatePresence>
+
+      {/* Resource Warning Modal */}
+      <ResourceWarning
+        isOpen={showResourceWarning}
+        vmName={warningDetails?.vm.name || ''}
+        currentPlan={warningDetails?.vm.config}
+        resourceType={warningDetails?.resourceType as 'cpu' | 'ram' | 'disk'}
+        currentUsage={warningDetails?.usage || 0}
+        onUpgrade={handleUpgradeVM}
+        onClose={handleCloseResourceWarning}
+      />
     </div>
   );
 }

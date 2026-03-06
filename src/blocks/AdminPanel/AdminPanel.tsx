@@ -7,19 +7,22 @@ import {
   Activity,
   Server,
   Clock,
-  BarChart3,
-  Globe,
+  HardDrive,
   Edit,
   Play,
   Square,
-  Trash2
+  Trash2,
+  Filter,
+  ArrowUpDown
 } from 'lucide-react';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
 import { useAppDispatch, useAppSelector } from '../../lib/hooks';
 import { 
   fetchAllUsersVMsAsync, 
-  updateVMResourcesAsync, 
+  updateVMResourcesAsync,
+  fetchActiveVMMetricsAsync,
   selectAdminVMs, 
+  selectAdminVMMetrics,
   selectAdminLoading,
   selectAdminError
 } from '../../lib/slices/adminSlice';
@@ -56,6 +59,7 @@ interface AdminPanelProps {
 export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
   const dispatch = useAppDispatch();
   const adminVMs = useAppSelector(selectAdminVMs);
+  const vmMetrics = useAppSelector(selectAdminVMMetrics);
   const loading = useAppSelector(selectAdminLoading);
   const error = useAppSelector(selectAdminError);
   
@@ -71,10 +75,58 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
     pricePerHour: 0
   });
 
+  // Фильтр и сортировка
+  type FilterType = 'all' | 'active' | 'inactive';
+  type SortType = 'none' | 'cpu' | 'ram' | 'storage';
+  
+  const [filterType, setFilterType] = useState<FilterType>('all');
+  const [sortType, setSortType] = useState<SortType>('none');
+
+  // Фильтрация и сортировка VM
+  const filteredAndSortedVMs = useMemo(() => {
+    let result = [...adminVMs];
+
+    // Фильтрация
+    if (filterType === 'active') {
+      result = result.filter(vm => vm.status === 'RUNNING');
+    } else if (filterType === 'inactive') {
+      result = result.filter(vm => vm.status !== 'RUNNING');
+    }
+
+    // Сортировка
+    if (sortType === 'cpu') {
+      result.sort((a, b) => b.cpu_cores - a.cpu_cores);
+    } else if (sortType === 'ram') {
+      result.sort((a, b) => b.ram_mb - a.ram_mb);
+    } else if (sortType === 'storage') {
+      result.sort((a, b) => (b.storage || 0) - (a.storage || 0));
+    }
+
+    return result;
+  }, [adminVMs, filterType, sortType]);
+
   // Загрузить все VM при монтировании
   useEffect(() => {
     dispatch(fetchAllUsersVMsAsync());
   }, [dispatch]);
+
+  // Загрузить метрики для активных VM
+  useEffect(() => {
+    const activeVMIds = adminVMs
+      .filter(vm => vm.status === 'RUNNING')
+      .map(vm => vm.id);
+    
+    if (activeVMIds.length > 0) {
+      dispatch(fetchActiveVMMetricsAsync(activeVMIds));
+      
+      // Обновлять метрики каждые 5 секунд
+      const interval = setInterval(() => {
+        dispatch(fetchActiveVMMetricsAsync(activeVMIds));
+      }, 5000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [dispatch, adminVMs]);
 
   // Открыть модальное окно редактирования
   const handleEdit = (vm: AdminVM) => {
@@ -125,19 +177,74 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
     avgSessionTime: '0.0'
   };
 
-  const activityData = Array.from({ length: 24 }, (_, i) => ({
-    hour: `${i}:00`,
-    sessions: Math.floor(Math.random() * 10)
-  }));
+  // Данные потребления CPU активных VM
+  const cpuData = useMemo(() => {
+    return adminVMs
+      .filter(vm => vm.status === 'RUNNING')
+      .map(vm => {
+        const metrics = vmMetrics[vm.id];
+        const cpuPercent = metrics?.cpu_percent ?? 0;
+        return {
+          name: vm.name.length > 15 ? vm.name.substring(0, 15) + '...' : vm.name,
+          fullName: vm.name,
+          cpu: Number(cpuPercent.toFixed(1)),
+          tenant: vm.tenant_name
+        };
+      })
+      .sort((a, b) => b.cpu - a.cpu);
+  }, [adminVMs, vmMetrics]);
 
-  const platformData = [
-    { name: 'AWS', value: 30 },
-    { name: 'Azure', value: 25 },
-    { name: 'GCP', value: 20 },
-    { name: 'Other', value: 25 }
+  // Данные использования хранилища
+  const TOTAL_STORAGE_GB = 200;
+  const storageData = useMemo(() => {
+    // Группируем VM с одинаковыми tenant_name
+    const vmsByUser = adminVMs.reduce((acc, vm) => {
+      const storage = vm.storage || 0;
+      if (!acc[vm.tenant_name]) {
+        acc[vm.tenant_name] = 0;
+      }
+      acc[vm.tenant_name] += storage;
+      return acc;
+    }, {} as Record<string, number>);
+
+    // Создаем массив данных для диаграммы
+    const data = Object.entries(vmsByUser)
+      .map(([name, value]) => ({ name, value }))
+      .filter(item => item.value > 0)
+      .sort((a, b) => b.value - a.value);
+
+    // Вычисляем использованное место
+    const usedStorage = data.reduce((sum, item) => sum + item.value, 0);
+    const freeStorage = Math.max(0, TOTAL_STORAGE_GB - usedStorage);
+
+    // Добавляем свободное место
+    if (freeStorage > 0) {
+      data.push({ name: 'Свободно', value: freeStorage });
+    }
+
+    return data;
+  }, [adminVMs]);
+
+  // Цвета для диаграммы - яркие и различимые
+  const STORAGE_COLORS = [
+    '#ef4444', // red-500
+    '#f97316', // orange-500
+    '#f59e0b', // amber-500
+    '#eab308', // yellow-500
+    '#84cc16', // lime-500
+    '#22c55e', // green-500
+    '#10b981', // emerald-500
+    '#14b8a6', // teal-500
+    '#06b6d4', // cyan-500
+    '#0ea5e9', // sky-500
+    '#3b82f6', // blue-500
+    '#6366f1', // indigo-500
+    '#8b5cf6', // violet-500
+    '#a855f7', // purple-500
+    '#d946ef', // fuchsia-500
+    '#ec4899', // pink-500
+    '#334155', // gray-700 для свободного места
   ];
-
-  const COLORS = ['#000000', '#4a4a4a', '#666666', '#888888'];
 
   return (
     <div className={styles.container}>
@@ -239,31 +346,55 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
             className={styles.chartCard}
           >
             <h3>
-              <BarChart3 />
-              Активность по часам
+              <Activity />
+              Потребление CPU активных VM
             </h3>
-            <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={activityData}>
-                <defs>
-                  <linearGradient id="colorSessions" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#666666" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#666666" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
-                <XAxis dataKey="hour" stroke="#94a3b8" style={{ fontSize: '12px' }} />
-                <YAxis stroke="#94a3b8" style={{ fontSize: '12px' }} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '8px',
-                    color: '#fff'
-                  }}
-                />
-                <Area type="monotone" dataKey="sessions" stroke="#666666" fillOpacity={1} fill="url(#colorSessions)" />
-              </AreaChart>
-            </ResponsiveContainer>
+            {cpuData.length === 0 ? (
+              <div className={styles.emptyChart}>
+                <p>Нет активных VM</p>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={cpuData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
+                  <XAxis 
+                    dataKey="name" 
+                    stroke="#94a3b8" 
+                    style={{ fontSize: '11px' }}
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                  />
+                  <YAxis 
+                    stroke="#94a3b8" 
+                    style={{ fontSize: '12px' }}
+                    label={{ value: 'CPU %', angle: -90, position: 'insideLeft', fill: '#94a3b8' }}
+                  />
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        return (
+                          <div style={{
+                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                            border: '1px solid rgba(239, 68, 68, 0.5)',
+                            borderRadius: '8px',
+                            padding: '8px 12px',
+                            color: '#fff'
+                          }}>
+                            <p style={{ margin: '0 0 4px 0', fontWeight: 600 }}>{data.fullName}</p>
+                            <p style={{ margin: '0', fontSize: '12px', color: '#94a3b8' }}>Пользователь: {data.tenant}</p>
+                            <p style={{ margin: '4px 0 0 0', color: '#ef4444', fontWeight: 600 }}>CPU: {data.cpu}%</p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Bar dataKey="cpu" fill="#ef4444" radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </motion.div>
 
           <motion.div
@@ -273,26 +404,47 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
             className={styles.chartCard}
           >
             <h3>
-              <Globe />
-              Распределение по платформам
+              <HardDrive />
+              Использование хранилища ({TOTAL_STORAGE_GB} GB)
             </h3>
-            <ResponsiveContainer width="100%" height={200}>
+            <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={platformData}
+                  data={storageData}
                   cx="50%"
                   cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
+                  labelLine={true}
+                  label={({ name, value, percent }) => {
+                    if (percent < 0.03) return ''; // Не показываем лейбл для очень маленьких сегментов
+                    return `${name}: ${value}GB (${(percent * 100).toFixed(1)}%)`;
+                  }}
+                  outerRadius={90}
                   fill="#666666"
                   dataKey="value"
                 >
-                  {platformData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
+                  {storageData.map((entry, index) => {
+                    const colorIndex = entry.name === 'Свободно' 
+                      ? STORAGE_COLORS.length - 1 
+                      : index % (STORAGE_COLORS.length - 1);
+                    return (
+                      <Cell key={`cell-${index}`} fill={STORAGE_COLORS[colorIndex]} />
+                    );
+                  })}
                 </Pie>
+                <Legend
+                  verticalAlign="bottom"
+                  height={36}
+                  formatter={(value, entry: any) => {
+                    const data = entry.payload;
+                    return `${data.name}: ${data.value}GB`;
+                  }}
+                  wrapperStyle={{
+                    fontSize: '12px',
+                    color: '#94a3b8'
+                  }}
+                />
                 <Tooltip
+                  formatter={(value: any) => [`${value} GB`, 'Хранилище']}
                   contentStyle={{
                     backgroundColor: 'rgba(15, 23, 42, 0.9)',
                     border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -319,6 +471,46 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
             <span className={styles.vmCount}>Всего: {adminVMs.length}</span>
           </div>
 
+          <div className={styles.controls}>
+            <div className={styles.filterGroup}>
+              <Filter size={18} />
+              <span>Фильтр:</span>
+              <button
+                className={`${styles.filterButton} ${filterType === 'all' ? styles.active : ''}`}
+                onClick={() => setFilterType('all')}
+              >
+                Все
+              </button>
+              <button
+                className={`${styles.filterButton} ${filterType === 'active' ? styles.active : ''}`}
+                onClick={() => setFilterType('active')}
+              >
+                Активные
+              </button>
+              <button
+                className={`${styles.filterButton} ${filterType === 'inactive' ? styles.active : ''}`}
+                onClick={() => setFilterType('inactive')}
+              >
+                Неактивные
+              </button>
+            </div>
+
+            <div className={styles.sortGroup}>
+              <ArrowUpDown size={18} />
+              <span>Сортировка:</span>
+              <select
+                className={styles.sortSelect}
+                value={sortType}
+                onChange={(e) => setSortType(e.target.value as SortType)}
+              >
+                <option value="none">По умолчанию</option>
+                <option value="cpu">По CPU</option>
+                <option value="ram">По RAM</option>
+                <option value="storage">По Storage</option>
+              </select>
+            </div>
+          </div>
+
           {loading ? (
             <div className={styles.loadingState}>
               <Activity className={styles.spinner} />
@@ -328,10 +520,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
             <div className={styles.errorState}>
               <p>Ошибка: {error}</p>
             </div>
-          ) : adminVMs.length === 0 ? (
+          ) : filteredAndSortedVMs.length === 0 ? (
             <div className={styles.emptyState}>
               <Server />
-              <p>Нет виртуальных машин</p>
+              <p>{adminVMs.length === 0 ? 'Нет виртуальных машин' : 'Нет VM, соответствующих фильтру'}</p>
             </div>
           ) : (
             <div className={styles.vmTable}>
@@ -350,7 +542,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {adminVMs.map((vm) => (
+                  {filteredAndSortedVMs.map((vm) => (
                     <tr key={vm.id}>
                       <td>{vm.id}</td>
                       <td>{vm.name}</td>

@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { AdminVM, VMResourceUpdate } from '../../types';
+import { AdminVM, VMResourceUpdate, VMMetrics } from '../../types';
 import { apiRequestWithAuth, enableBackend } from '../api';
 
 // Асинхронные thunks для админа
@@ -24,14 +24,35 @@ export const updateVMResourcesAsync = createAsyncThunk(
   }
 );
 
+export const fetchActiveVMMetricsAsync = createAsyncThunk(
+  'admin/fetchActiveVMMetrics',
+  async (vmIds: number[]) => {
+    if (enableBackend && vmIds.length > 0) {
+      const promises = vmIds.map(async (vmId) => {
+        try {
+          const metrics = await apiRequestWithAuth<VMMetrics>('GET', `/v1/resources/${vmId}/metrics/`);
+          return { vmId, metrics };
+        } catch (error) {
+          return null;
+        }
+      });
+      const results = await Promise.all(promises);
+      return results.filter((r): r is { vmId: number; metrics: VMMetrics } => r !== null);
+    }
+    return [];
+  }
+);
+
 interface AdminState {
   vms: AdminVM[];
+  vmMetrics: Record<number, VMMetrics>;
   loading: boolean;
   error: string | null;
 }
 
 const initialState: AdminState = {
   vms: [],
+  vmMetrics: {},
   loading: false,
   error: null,
 };
@@ -78,6 +99,12 @@ const adminSlice = createSlice({
       .addCase(updateVMResourcesAsync.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message || 'Ошибка обновления ресурсов VM';
+      })
+      // Fetch active VM metrics
+      .addCase(fetchActiveVMMetricsAsync.fulfilled, (state, action) => {
+        action.payload.forEach(({ vmId, metrics }) => {
+          state.vmMetrics[vmId] = metrics;
+        });
       });
   },
 });
@@ -86,6 +113,7 @@ export const { clearError, clearAdminData } = adminSlice.actions;
 
 // Селекторы
 export const selectAdminVMs = (state: { admin: AdminState }) => state.admin.vms;
+export const selectAdminVMMetrics = (state: { admin: AdminState }) => state.admin.vmMetrics;
 export const selectAdminLoading = (state: { admin: AdminState }) => state.admin.loading;
 export const selectAdminError = (state: { admin: AdminState }) => state.admin.error;
 

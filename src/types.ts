@@ -62,6 +62,7 @@ export interface DeployedVM {
   status: 'running' | 'stopped' | 'creating' | 'error';
   config: VMInstance;
   ipAddress: string;
+  port?: number;
   cpuUsage: number;
   ramUsage: number;
   diskUsage: number;

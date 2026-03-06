@@ -77,6 +77,14 @@ export const VMPlanSelector: React.FC<VMPlanSelectorProps> = ({ onSelect }) => {
 
   return (
     <div className={styles.container}>
+      {/* Logo */}
+      <div className={styles.logoSection}>
+        <div className={styles.logo}>
+          <div className={styles.logoCircle}>МТС</div>
+          <span className={styles.logoText}>Облачко</span>
+        </div>
+      </div>
+
       {/* Progress Bar */}
       <div className={styles.progressBar}>
         <div className={styles.progressSteps}>
@@ -175,19 +183,6 @@ export const VMPlanSelector: React.FC<VMPlanSelectorProps> = ({ onSelect }) => {
             <div className={styles.header}>
               <h1>Выберите операционную систему</h1>
             </div>
-
-            {selectedPlan && (
-              <div className={styles.selectedPlanSummary}>
-                <h3>Выбранный тариф: {selectedPlan.name}</h3>
-                <div className={styles.summarySpecs}>
-                  <span>{selectedPlan.cpu} vCPU</span>
-                  <span>•</span>
-                  <span>{selectedPlan.ram} МБ RAM</span>
-                  <span>•</span>
-                  <span>{selectedPlan.storage} ГБ Storage</span>
-                </div>
-              </div>
-            )}
 
             <div className={styles.osList}>
               {OS_OPTIONS.map((os) => (
